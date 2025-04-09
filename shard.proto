@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package shard;
+
+// The Shard service definition
+service ShardService {
+  // Find a user by username
+  rpc FindUser (FindUserRequest) returns (FindUserResponse) {}
+  
+  // Create a new user
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse) {}
+  
+  // Verify user credentials
+  rpc VerifyLogin (VerifyLoginRequest) returns (VerifyLoginResponse) {}
+  
+  // Get the highest user ID
+  rpc GetHighestUserId (GetHighestUserIdRequest) returns (GetHighestUserIdResponse) {}
+  
+  // Update leader status
+  rpc UpdateLeader (UpdateLeaderRequest) returns (UpdateLeaderResponse) {}
+  
+  // Heartbeat to check server availability
+  rpc Heartbeat (HeartbeatRequest) returns (HeartbeatResponse) {}
+  
+  // Direct insert (for replication between replicas)
+  rpc DirectInsert (DirectInsertRequest) returns (DirectInsertResponse) {}
+}
+
+// Find user request
+message FindUserRequest {
+  string username = 1;
+}
+
+// Find user response
+message FindUserResponse {
+  bool found = 1;
+  int32 user_id = 2;
+  string username = 3;
+  string password_hash = 4;
+}
+
+// Create user request
+message CreateUserRequest {
+  string username = 1;
+  string password_hash = 2;
+}
+
+// Create user response
+message CreateUserResponse {
+  bool success = 1;
+  int32 user_id = 2;
+  string error_message = 3;
+}
+
+// Verify login request
+message VerifyLoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+// Verify login response
+message VerifyLoginResponse {
+  bool success = 1;
+  int32 user_id = 2;
+}
+
+// Get highest user ID request
+message GetHighestUserIdRequest {}
+
+// Get highest user ID response
+message GetHighestUserIdResponse {
+  int32 highest_id = 1;
+}
+
+// Update leader request
+message UpdateLeaderRequest {
+  int32 replica_id = 1;
+  bool is_leader = 2;
+}
+
+// Update leader response
+message UpdateLeaderResponse {
+  bool success = 1;
+  int32 current_leader_id = 2;
+}
+
+// Heartbeat request
+message HeartbeatRequest {
+  int32 replica_id = 1;
+}
+
+// Heartbeat response
+message HeartbeatResponse {
+  bool alive = 1;
+  bool is_leader = 2;
+  int32 leader_id = 3;
+}
+
+// Direct insert request (for replication)
+message DirectInsertRequest {
+  int32 user_id = 1;
+  string username = 2;
+  string password_hash = 3;
+}
+
+// Direct insert response
+message DirectInsertResponse {
+  bool success = 1;
+  string error_message = 2;
+}
