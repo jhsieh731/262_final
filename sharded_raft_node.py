@@ -197,6 +197,10 @@ class ShardedRaftNode(raft_pb2_grpc.RaftServiceServicer):
                 username = content.get("username")
                 items = content.get("items")
                 result = self.db.save_cart(username, items)
+            elif entry.action == "purchase_cart":
+                logger.info("PURCHASECART")
+                username = content.get("username")
+                result = self.db.purchase_cart(username)
             else:
                 logger.warning(f"Unknown action: {entry.action}")
                 return False

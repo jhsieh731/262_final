@@ -201,6 +201,14 @@ class ShardedDatabase:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def purchase_cart(self, username):
+        """Delete all cart entries for a user after purchase"""
+        try:
+            # Simply reuse the delete_cart_for_user method
+            return self.delete_cart_for_user(username)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+            
     def close(self):
         """Close the database connection"""
         if self.conn:

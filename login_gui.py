@@ -245,15 +245,21 @@ class LoginApp:
                 total_items += quantity
         
         if items:
-            # Show purchase confirmation
-            message = f"Purchase successful! {username} bought {total_items} items:\n"
-            for item in items:
-                message += f"- {item['name']}: {item['quantity']}\n"
-            messagebox.showinfo("Purchase Complete", message)
+            # Delete cart entries for this user
+            result = self.client.purchase_cart(username)
             
-            # Reset all counters to zero
-            for counter in self.counters:
-                counter.set("0")
+            if result["success"]:
+                # Show purchase confirmation
+                message = f"Purchase successful! {username} bought {total_items} items:\n"
+                for item in items:
+                    message += f"- {item['name']}: {item['quantity']}\n"
+                messagebox.showinfo("Purchase Complete", message)
+                
+                # Reset all counters to zero
+                for counter in self.counters:
+                    counter.set("0")
+            else:
+                messagebox.showerror("Purchase Error", f"Failed to process purchase: {result.get('error', 'Unknown error')}")
         else:
             messagebox.showinfo("No Items", "No items were selected for purchase.")
     

@@ -51,6 +51,42 @@ class ShardedClient:
             logger.error(f"Error saving cart: {e}")
             return {"success": False, "error": str(e)}
 
+    def purchase_cart(self, username):
+        """Delete all cart entries for a user after purchase."""
+        # Figure out which shard the user is in (same logic as save_cart)
+        user_found = False
+        user_shard = None
+        if self.find_leader("even"):
+            exists_result = self._check_user_exists("even", username)
+            if exists_result["exists"]:
+                user_found = True
+                user_shard = "even"
+        if not user_found and self.find_leader("odd"):
+            exists_result = self._check_user_exists("odd", username)
+            if exists_result["exists"]:
+                user_found = True
+                user_shard = "odd"
+        if not user_found or not user_shard:
+            return {"success": False, "error": "User not found in any shard"}
+        # Send DBUpdate to the correct shard
+        try:
+            shard = self.shards[user_shard]
+            content = pickle.dumps({"username": username})
+            response = shard["leader_stub"].DBUpdate(
+                raft_pb2.DBUpdateRequest(
+                    action="purchase_cart",
+                    content=content,
+                    commit_index=random.randint(1, 1000000)
+                )
+            )
+            if response.success:
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Cart purchase failed"}
+        except Exception as e:
+            logger.error(f"Error processing purchase: {e}")
+            return {"success": False, "error": str(e)}
+
     def __init__(self):
         # Configuration for both shards
         self.shards = {
