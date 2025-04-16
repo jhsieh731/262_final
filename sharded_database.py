@@ -57,6 +57,14 @@ class ShardedDatabase:
         )
         ''')
         
+        # Create cart table
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cart (
+            username TEXT,
+            item_name TEXT,
+            quantity INTEGER
+        )
+        ''')
         self.conn.commit()
         print(f"[{self.shard_type.upper()} SHARD] [REPLICA {self.replica_id}] Database setup successful")
     
@@ -170,6 +178,29 @@ class ShardedDatabase:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
+    def delete_cart_for_user(self, username):
+        """Delete all cart entries for a given username"""
+        try:
+            self.cursor.execute("DELETE FROM cart WHERE username = ?", (username,))
+            self.conn.commit()
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def save_cart(self, username, items):
+        """Save cart for a user (delete old, insert new)"""
+        try:
+            self.delete_cart_for_user(username)
+            for item in items:
+                self.cursor.execute(
+                    "INSERT INTO cart (username, item_name, quantity) VALUES (?, ?, ?)",
+                    (username, item["name"], item["quantity"])
+                )
+            self.conn.commit()
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def close(self):
         """Close the database connection"""
         if self.conn:

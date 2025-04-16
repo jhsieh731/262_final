@@ -165,6 +165,7 @@ class ShardedRaftNode(raft_pb2_grpc.RaftServiceServicer):
     
     def _apply_log_entry(self, entry):
         """Apply a log entry to the state machine (database)"""
+        logger.info(f"Applying log entry: {entry}")
         try:
             content = pickle.loads(entry.content)
             
@@ -191,6 +192,11 @@ class ShardedRaftNode(raft_pb2_grpc.RaftServiceServicer):
                 # We can't modify the entry directly, so we'll store it in a variable
                 # that will be accessed by the DBUpdate method
                 self.last_applied_data = pickle.dumps(user_exists)
+            elif entry.action == "save_cart":
+                logger.info("SAVECART")
+                username = content.get("username")
+                items = content.get("items")
+                result = self.db.save_cart(username, items)
             else:
                 logger.warning(f"Unknown action: {entry.action}")
                 return False

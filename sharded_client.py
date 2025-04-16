@@ -12,6 +12,45 @@ from logger import set_logger
 logger = set_logger("sharded_client", "sharded_client.log")
 
 class ShardedClient:
+    # ... existing methods ...
+
+    def save_cart(self, username, items):
+        """Save the cart for a user in the correct shard (delete old, insert new)."""
+        # Figure out which shard the user is in (same logic as login_user)
+        user_found = False
+        user_shard = None
+        if self.find_leader("even"):
+            exists_result = self._check_user_exists("even", username)
+            if exists_result["exists"]:
+                user_found = True
+                user_shard = "even"
+        if not user_found and self.find_leader("odd"):
+            exists_result = self._check_user_exists("odd", username)
+            if exists_result["exists"]:
+                user_found = True
+                user_shard = "odd"
+        if not user_found or not user_shard:
+            return {"success": False, "error": "User not found in any shard"}
+        # Send DBUpdate to the correct shard
+        try:
+            shard = self.shards[user_shard]
+            import pickle
+            content = pickle.dumps({"username": username, "items": items})
+            response = shard["leader_stub"].DBUpdate(
+                raft_pb2.DBUpdateRequest(
+                    action="save_cart",
+                    content=content,
+                    commit_index=random.randint(1, 1000000)
+                )
+            )
+            if response.success:
+                return {"success": True}
+            else:
+                return {"success": False, "error": "Cart save failed"}
+        except Exception as e:
+            logger.error(f"Error saving cart: {e}")
+            return {"success": False, "error": str(e)}
+
     def __init__(self):
         # Configuration for both shards
         self.shards = {

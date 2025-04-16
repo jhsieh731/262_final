@@ -33,7 +33,7 @@ def print_db_contents(db_file):
     try:
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
-        for table in ["users", "messages"]:
+        for table in ["users", "messages", "cart"]:
             print_table(cursor, table)
         conn.close()
     except Exception as e:

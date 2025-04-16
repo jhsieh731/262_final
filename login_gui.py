@@ -269,20 +269,25 @@ class LoginApp:
         self.notebook.select(0)
     
     def save_items(self, username, window):
-        """Save the current item selection"""
+        """Save the current item selection to the backend cart table via the client."""
         items = []
         for i, counter in enumerate(self.counters):
             quantity = int(counter.get())
             if quantity > 0:
                 items.append({"name": f"Item {i+1}", "quantity": quantity})
         
-        if items:
-            message = f"Saved {len(items)} items for {username}:\n"
-            for item in items:
-                message += f"- {item['name']}: {item['quantity']}\n"
-            messagebox.showinfo("Items Saved", message)
+        # Call backend to save cart
+        result = self.client.save_cart(username, items)
+        if result["success"]:
+            if items:
+                message = f"Saved {len(items)} items for {username}:\n"
+                for item in items:
+                    message += f"- {item['name']}: {item['quantity']}\n"
+                messagebox.showinfo("Items Saved", message)
+            else:
+                messagebox.showinfo("No Items", "No items were selected. Cart cleared.")
         else:
-            messagebox.showinfo("No Items", "No items were selected.")
+            messagebox.showerror("Save Error", f"Failed to save cart: {result.get('error', 'Unknown error')}")
     
     def register(self):
         username = self.register_username.get()
