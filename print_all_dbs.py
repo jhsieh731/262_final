@@ -13,39 +13,51 @@ def find_db_files():
                     db_files.append(os.path.join(db_dir, fname))
     return db_files
 
-def print_table(cursor, table_name):
+def print_table(cursor, table_name, out=None):
     try:
         cursor.execute(f"SELECT * FROM {table_name}")
         rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        print(f"  Table: {table_name}")
-        print(f"    Columns: {columns}")
+        columns = [description[0] for description in cursor.description]
+        s = f"  Table: {table_name}\n    Columns: {columns}"
+        print(s)
+        if out: out.write(s + "\n")
         if rows:
             for row in rows:
-                print(f"    {row}")
+                s = f"    {row}"
+                print(s)
+                if out: out.write(s + "\n")
         else:
-            print("    (empty)")
-    except sqlite3.OperationalError:
-        print(f"  Table: {table_name} (not found)")
+            s = "    (empty)"
+            print(s)
+            if out: out.write(s + "\n")
+    except Exception as e:
+        s = f"  Error reading table {table_name}: {e}"
+        print(s)
+        if out: out.write(s + "\n")
 
-def print_db_contents(db_file):
-    print(f"\n=== {db_file} ===")
+def print_db_contents(db_file, out=None):
+    s = f"\n=== {db_file} ==="
+    print(s)
+    if out: out.write(s + "\n")
     try:
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
         for table in ["users", "messages", "cart"]:
-            print_table(cursor, table)
+            print_table(cursor, table, out)
         conn.close()
     except Exception as e:
-        print(f"  Error reading DB: {e}")
+        s = f"  Error reading DB: {e}"
+        print(s)
+        if out: out.write(s + "\n")
 
 def main():
     db_files = find_db_files()
     if not db_files:
         print("No .db files found.")
         return
-    for db_file in db_files:
-        print_db_contents(db_file)
+    with open("db_dump.txt", "w") as out:
+        for db_file in db_files:
+            print_db_contents(db_file, out)
 
 if __name__ == "__main__":
     main()

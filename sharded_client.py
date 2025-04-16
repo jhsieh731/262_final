@@ -151,12 +151,31 @@ class ShardedClient:
             }
         }
     
-    def find_leader(self, shard_type, retries=3, delay=1.0):
+    def find_leader(self, shard_type, retries=5, delay=1.0):
         """Find the current leader for a specific shard"""
         shard = self.shards[shard_type]
         
+        # If we already have a leader, try it first
+        if shard["leader_id"] and shard["leader_stub"]:
+            try:
+                # Try a lightweight ping to the existing leader
+                leader_response = shard["leader_stub"].FindLeader(
+                    raft_pb2.FindLeaderRequest(requester_id="client"),
+                    timeout=1.0
+                )
+                if leader_response.leader_id == shard["leader_id"]:
+                    logger.info(f"Using existing {shard_type} shard leader: Node {shard['leader_id']}")
+                    return True
+            except Exception as e:
+                logger.warning(f"Existing leader for {shard_type} shard is no longer available: {e}")
+                # Clear the leader info since it's no longer valid
+                shard["leader_id"] = None
+                shard["leader_stub"] = None
+        
+        # Try to find a new leader
         attempt = 0
         while attempt < retries:
+            logger.info(f"Searching for {shard_type} shard leader (attempt {attempt+1}/{retries})")
             for node_id, node_info in shard["nodes"].items():
                 try:
                     addr = f"{node_info['host']}:{node_info['port']}"
@@ -184,17 +203,19 @@ class ShardedClient:
                                 shard["leader_stub"] = leader_stub
                                 logger.info(f"Found {shard_type} shard leader: Node {response.leader_id} at {leader_addr}")
                                 return True
-                        except Exception:
-                            # The reported leader is dead, continue searching
+                        except Exception as e:
+                            logger.warning(f"Reported leader {response.leader_id} for {shard_type} shard is not responding: {e}")
                             continue
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Node {node_id} for {shard_type} shard is not responding: {e}")
                     continue
             
             # Wait for election to finish if leader was dead
+            logger.info(f"No leader found for {shard_type} shard, waiting for election (attempt {attempt+1}/{retries})")
             time.sleep(delay)
             attempt += 1
         
-        logger.warning(f"No leader found for {shard_type} shard after retries.")
+        logger.warning(f"No leader found for {shard_type} shard after {retries} retries.")
         return False
     
     def find_all_leaders(self):
