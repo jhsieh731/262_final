@@ -145,8 +145,8 @@ class LoginApp:
     def show_item_list(self, username):
         # Create a new window for the item list
         item_window = tk.Toplevel(self.root)
-        item_window.title(f"Item List - {username}")
-        item_window.geometry("500x400")
+        item_window.title(f"Items - {username}")
+        item_window.geometry("500x500")
         item_window.resizable(False, False)
         
         # Create main frame
@@ -156,6 +156,15 @@ class LoginApp:
         # Create header
         header_label = ttk.Label(main_frame, text=f"Welcome, {username}!", style='Header.TLabel')
         header_label.pack(pady=(0, 20))
+        
+        # Get saved cart items for this user
+        cart_result = self.client.get_cart(username)
+        saved_items = {}
+        if cart_result["success"] and cart_result["items"]:
+            # Convert to dictionary for easy lookup
+            for item in cart_result["items"]:
+                saved_items[item["name"]] = item["quantity"]
+            messagebox.showinfo("Cart Loaded", f"Loaded {len(saved_items)} items from your saved cart.")
         
         # Create item list frame
         item_frame = ttk.Frame(main_frame)
@@ -168,8 +177,9 @@ class LoginApp:
         # Create item rows with counters
         self.counters = []
         for i in range(5):
+            item_name = f"Item {i+1}"
             # Item name
-            ttk.Label(item_frame, text=f"Item {i+1}").grid(row=i+1, column=0, padx=10, pady=10, sticky=tk.W)
+            ttk.Label(item_frame, text=item_name).grid(row=i+1, column=0, padx=10, pady=10, sticky=tk.W)
             
             # Counter frame
             counter_frame = ttk.Frame(item_frame)
@@ -183,11 +193,15 @@ class LoginApp:
                                 command=lambda idx=i: self.decrement_counter(idx))
             minus_btn.pack(side=tk.LEFT, padx=5)
             
-            # Counter value
-            counter_var = tk.StringVar(value="0")
+            # Counter value - initialize with saved value if available
+            initial_value = "0"
+            if item_name in saved_items:
+                initial_value = str(saved_items[item_name])
+                
+            counter_var = tk.StringVar(value=initial_value)
             self.counters.append(counter_var)
             counter_label = ttk.Label(counter_frame, textvariable=counter_var, width=4, 
-                                   font=('Arial', 12), anchor='center')
+                                    font=('Arial', 12), anchor='center')
             counter_label.pack(side=tk.LEFT, padx=10)
             
             # Plus button

@@ -209,6 +209,20 @@ class ShardedDatabase:
         except Exception as e:
             return {"success": False, "error": str(e)}
             
+    def get_cart(self, username):
+        """Get all cart items for a user"""
+        try:
+            self.cursor.execute("SELECT item_name, quantity FROM cart WHERE username = ?", (username,))
+            cart_items = self.cursor.fetchall()
+            
+            items = []
+            for item_name, quantity in cart_items:
+                items.append({"name": item_name, "quantity": quantity})
+                
+            return {"success": True, "items": items}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+            
     def close(self):
         """Close the database connection"""
         if self.conn:

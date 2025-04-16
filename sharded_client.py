@@ -86,6 +86,47 @@ class ShardedClient:
         except Exception as e:
             logger.error(f"Error processing purchase: {e}")
             return {"success": False, "error": str(e)}
+            
+    def get_cart(self, username):
+        """Get all cart items for a user."""
+        # Figure out which shard the user is in
+        user_found = False
+        user_shard = None
+        if self.find_leader("even"):
+            exists_result = self._check_user_exists("even", username)
+            if exists_result["exists"]:
+                user_found = True
+                user_shard = "even"
+        if not user_found and self.find_leader("odd"):
+            exists_result = self._check_user_exists("odd", username)
+            if exists_result["exists"]:
+                user_found = True
+                user_shard = "odd"
+        if not user_found or not user_shard:
+            return {"success": False, "error": "User not found in any shard", "items": []}
+        # Send DBUpdate to the correct shard
+        try:
+            shard = self.shards[user_shard]
+            content = pickle.dumps({"username": username})
+            response = shard["leader_stub"].DBUpdate(
+                raft_pb2.DBUpdateRequest(
+                    action="get_cart",
+                    content=content,
+                    commit_index=random.randint(1, 1000000)
+                )
+            )
+            if response.success and hasattr(response, 'applied_data') and response.applied_data:
+                try:
+                    items = pickle.loads(response.applied_data)
+                    return {"success": True, "items": items}
+                except Exception as e:
+                    logger.error(f"Error unpickling cart data: {e}")
+                    return {"success": False, "error": f"Error unpickling cart data: {e}", "items": []}
+            else:
+                return {"success": False, "error": "Failed to retrieve cart", "items": []}
+        except Exception as e:
+            logger.error(f"Error getting cart: {e}")
+            return {"success": False, "error": str(e), "items": []}
 
     def __init__(self):
         # Configuration for both shards

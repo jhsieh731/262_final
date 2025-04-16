@@ -201,6 +201,12 @@ class ShardedRaftNode(raft_pb2_grpc.RaftServiceServicer):
                 logger.info("PURCHASECART")
                 username = content.get("username")
                 result = self.db.purchase_cart(username)
+            elif entry.action == "get_cart":
+                logger.info("GETCART")
+                username = content.get("username")
+                result = self.db.get_cart(username)
+                # Store the cart items in last_applied_data to return to the client
+                self.last_applied_data = pickle.dumps(result["items"])
             else:
                 logger.warning(f"Unknown action: {entry.action}")
                 return False
