@@ -1,0 +1,2 @@
+2025-04-20 19:56:20,629 [INFO] [MainThread] Shard server started at localhost:6000
+2025-04-20 19:56:20,639 [INFO] [Thread-1] Server ('localhost', 6000) is now the leader. Alive peers: [('localhost', 6001), ('localhost', 6002), ('localhost', 6000)]

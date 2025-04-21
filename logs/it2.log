@@ -1,0 +1,4 @@
+2025-04-20 19:56:20,644 [INFO] Itinerary server started at localhost:7102
+2025-04-20 19:57:11,074 [INFO] Replicated itinerary 3 by 3
+2025-04-20 19:58:08,633 [INFO] Replicated itinerary 3 by 2
+2025-04-20 19:58:35,893 [INFO] Server ('localhost', 7102) is now the leader. Alive: [('localhost', 7102)]
