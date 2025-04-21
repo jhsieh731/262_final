@@ -5,20 +5,28 @@ import threading
 import time
 import random
 import logging 
+import json
 
 from proto import user_cart_pb2, user_cart_pb2_grpc
 from proto import itinerary_pb2, itinerary_pb2_grpc
 
-SHARD_1_REPLICAS = [("localhost", 5000), ("localhost", 5001), ("localhost", 5002)]
-SHARD_2_REPLICAS = [("localhost", 6000), ("localhost", 6001), ("localhost", 6002)]
-ITINERARY_REPLICAS = [("localhost", 7100), ("localhost", 7101), ("localhost", 7102)]
+
+def load_config():
+    with open("config.json") as f:
+        return json.load(f)
+
+config = load_config()
+
+SHARD_1_REPLICAS = [(r["host"], r["port"]) for r in config["shard1"]]
+SHARD_2_REPLICAS = [(r["host"], r["port"]) for r in config["shard2"]]
+ITINERARY_REPLICAS = [(r["host"], r["port"]) for r in config["itinerary"]]
 
 POLL_INTERVAL = 5  # seconds
 
 # Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-file_handler = logging.FileHandler('client_app.log')
+file_handler = logging.FileHandler('logs/client_app.log')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)

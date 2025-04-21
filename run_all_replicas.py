@@ -1,15 +1,19 @@
 import subprocess
-import time
 import os
-import threading
+import json
 
-def run_replicas(kind, base_port, count, db_prefix, script_name):
+def load_config():
+    with open("config.json") as f:
+        return json.load(f)
+
+def run_replicas(kind, replicas, script_name):
     processes = {}
-    for i in range(count):
-        port = base_port + i
-        host = "localhost"
-        peers = ",".join(f"{host}:{base_port + j}" for j in range(count) if j != i)
-        db_file = f"{db_prefix}{i}.db"
+    for i, replica in enumerate(replicas):
+        host, port, db_file = replica["host"], replica["port"], replica["db"]
+        peers = ",".join(
+            f"{peer['host']}:{peer['port']}"
+            for peer in replicas if peer != replica
+        )
         name = f"{kind}{i}"
 
         os.makedirs("logs", exist_ok=True)
@@ -27,10 +31,12 @@ def run_replicas(kind, base_port, count, db_prefix, script_name):
     return processes
 
 def main():
+    config = load_config()
     print("Spawning all replicas...\n")
-    shard1 = run_replicas("s1r", 5000, 3, "shard1_replica", "shard_server.py")
-    shard2 = run_replicas("s2r", 6000, 3, "shard2_replica", "shard_server.py")
-    itinerary = run_replicas("it", 7100, 3, "itinerary_replica", "itinerary_server.py")
+    
+    shard1 = run_replicas("s1r", config["shard1"], "shard_server.py")
+    shard2 = run_replicas("s2r", config["shard2"], "shard_server.py")
+    itinerary = run_replicas("it", config["itinerary"], "itinerary_server.py")
 
     all_procs = {**shard1, **shard2, **itinerary}
 

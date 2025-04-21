@@ -250,8 +250,8 @@ class ItineraryServer(itinerary_pb2_grpc.ItineraryServiceServicer):
         """)
         cur.execute("SELECT COUNT(*) FROM itinerary")
         if cur.fetchone()[0] == 0:
-            for name in ['Flight', 'Hotel', 'Car']:
-                cur.execute("INSERT INTO itinerary (name, number) VALUES (?, ?)", (name, 10))
+            for name in ['Apple', 'Banana', 'Carrot']:
+                cur.execute("INSERT INTO itinerary (name, number) VALUES (?, ?)", (name, 100))
         self.db_conn.commit()
 
     def _start_heartbeat_thread(self):

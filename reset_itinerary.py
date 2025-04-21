@@ -1,11 +1,15 @@
 import sqlite3
 import os
+import json
 
-REPLICAS = [
-    "itinerary_replica0.db",
-    "itinerary_replica1.db",
-    "itinerary_replica2.db",
-]
+
+def load_config():
+    with open("config.json") as f:
+        return json.load(f)
+
+config = load_config()
+REPLICAS = [r["db"] for r in config["itinerary"]]
+
 
 ITEMS = [("Apple", 100), ("Banana", 100), ("Carrot", 100)]
 
