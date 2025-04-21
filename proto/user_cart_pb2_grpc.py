@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from proto import user_cart_pb2 as proto_dot_user__cart__pb2
+import user_cart_pb2 as user__cart__pb2
 
 
 class UserCartServiceStub(object):
@@ -16,48 +16,48 @@ class UserCartServiceStub(object):
         """
         self.Login = channel.unary_unary(
                 '/usercart.UserCartService/Login',
-                request_serializer=proto_dot_user__cart__pb2.LoginRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.LoginResponse.FromString,
+                request_serializer=user__cart__pb2.LoginRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.LoginResponse.FromString,
                 )
         self.CreateAccount = channel.unary_unary(
                 '/usercart.UserCartService/CreateAccount',
-                request_serializer=proto_dot_user__cart__pb2.CreateAccountRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.CreateAccountResponse.FromString,
+                request_serializer=user__cart__pb2.CreateAccountRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.CreateAccountResponse.FromString,
                 )
         self.AddToCart = channel.unary_unary(
                 '/usercart.UserCartService/AddToCart',
-                request_serializer=proto_dot_user__cart__pb2.UpdateCartRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.CartResponse.FromString,
+                request_serializer=user__cart__pb2.UpdateCartRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.CartResponse.FromString,
                 )
         self.RemoveFromCart = channel.unary_unary(
                 '/usercart.UserCartService/RemoveFromCart',
-                request_serializer=proto_dot_user__cart__pb2.UpdateCartRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.CartResponse.FromString,
+                request_serializer=user__cart__pb2.UpdateCartRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.CartResponse.FromString,
                 )
         self.GetCart = channel.unary_unary(
                 '/usercart.UserCartService/GetCart',
-                request_serializer=proto_dot_user__cart__pb2.UserRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.CartResponse.FromString,
+                request_serializer=user__cart__pb2.UserRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.CartResponse.FromString,
                 )
         self.Checkout = channel.unary_unary(
                 '/usercart.UserCartService/Checkout',
-                request_serializer=proto_dot_user__cart__pb2.UserRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.CheckoutResponse.FromString,
+                request_serializer=user__cart__pb2.UserRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.CheckoutResponse.FromString,
                 )
         self.ReplicateCart = channel.unary_unary(
                 '/usercart.UserCartService/ReplicateCart',
-                request_serializer=proto_dot_user__cart__pb2.ReplicateCartRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.Empty.FromString,
+                request_serializer=user__cart__pb2.ReplicateCartRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.Empty.FromString,
                 )
         self.ReplicateUser = channel.unary_unary(
                 '/usercart.UserCartService/ReplicateUser',
-                request_serializer=proto_dot_user__cart__pb2.ReplicateUserRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.Empty.FromString,
+                request_serializer=user__cart__pb2.ReplicateUserRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.Empty.FromString,
                 )
         self.Heartbeat = channel.unary_unary(
                 '/usercart.UserCartService/Heartbeat',
-                request_serializer=proto_dot_user__cart__pb2.HeartbeatRequest.SerializeToString,
-                response_deserializer=proto_dot_user__cart__pb2.HeartbeatResponse.FromString,
+                request_serializer=user__cart__pb2.HeartbeatRequest.SerializeToString,
+                response_deserializer=user__cart__pb2.HeartbeatResponse.FromString,
                 )
 
 
@@ -125,48 +125,48 @@ def add_UserCartServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Login': grpc.unary_unary_rpc_method_handler(
                     servicer.Login,
-                    request_deserializer=proto_dot_user__cart__pb2.LoginRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.LoginResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.LoginRequest.FromString,
+                    response_serializer=user__cart__pb2.LoginResponse.SerializeToString,
             ),
             'CreateAccount': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateAccount,
-                    request_deserializer=proto_dot_user__cart__pb2.CreateAccountRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.CreateAccountResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.CreateAccountRequest.FromString,
+                    response_serializer=user__cart__pb2.CreateAccountResponse.SerializeToString,
             ),
             'AddToCart': grpc.unary_unary_rpc_method_handler(
                     servicer.AddToCart,
-                    request_deserializer=proto_dot_user__cart__pb2.UpdateCartRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.UpdateCartRequest.FromString,
+                    response_serializer=user__cart__pb2.CartResponse.SerializeToString,
             ),
             'RemoveFromCart': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveFromCart,
-                    request_deserializer=proto_dot_user__cart__pb2.UpdateCartRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.UpdateCartRequest.FromString,
+                    response_serializer=user__cart__pb2.CartResponse.SerializeToString,
             ),
             'GetCart': grpc.unary_unary_rpc_method_handler(
                     servicer.GetCart,
-                    request_deserializer=proto_dot_user__cart__pb2.UserRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.CartResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.UserRequest.FromString,
+                    response_serializer=user__cart__pb2.CartResponse.SerializeToString,
             ),
             'Checkout': grpc.unary_unary_rpc_method_handler(
                     servicer.Checkout,
-                    request_deserializer=proto_dot_user__cart__pb2.UserRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.CheckoutResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.UserRequest.FromString,
+                    response_serializer=user__cart__pb2.CheckoutResponse.SerializeToString,
             ),
             'ReplicateCart': grpc.unary_unary_rpc_method_handler(
                     servicer.ReplicateCart,
-                    request_deserializer=proto_dot_user__cart__pb2.ReplicateCartRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.Empty.SerializeToString,
+                    request_deserializer=user__cart__pb2.ReplicateCartRequest.FromString,
+                    response_serializer=user__cart__pb2.Empty.SerializeToString,
             ),
             'ReplicateUser': grpc.unary_unary_rpc_method_handler(
                     servicer.ReplicateUser,
-                    request_deserializer=proto_dot_user__cart__pb2.ReplicateUserRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.Empty.SerializeToString,
+                    request_deserializer=user__cart__pb2.ReplicateUserRequest.FromString,
+                    response_serializer=user__cart__pb2.Empty.SerializeToString,
             ),
             'Heartbeat': grpc.unary_unary_rpc_method_handler(
                     servicer.Heartbeat,
-                    request_deserializer=proto_dot_user__cart__pb2.HeartbeatRequest.FromString,
-                    response_serializer=proto_dot_user__cart__pb2.HeartbeatResponse.SerializeToString,
+                    request_deserializer=user__cart__pb2.HeartbeatRequest.FromString,
+                    response_serializer=user__cart__pb2.HeartbeatResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -190,8 +190,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/Login',
-            proto_dot_user__cart__pb2.LoginRequest.SerializeToString,
-            proto_dot_user__cart__pb2.LoginResponse.FromString,
+            user__cart__pb2.LoginRequest.SerializeToString,
+            user__cart__pb2.LoginResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -207,8 +207,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/CreateAccount',
-            proto_dot_user__cart__pb2.CreateAccountRequest.SerializeToString,
-            proto_dot_user__cart__pb2.CreateAccountResponse.FromString,
+            user__cart__pb2.CreateAccountRequest.SerializeToString,
+            user__cart__pb2.CreateAccountResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -224,8 +224,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/AddToCart',
-            proto_dot_user__cart__pb2.UpdateCartRequest.SerializeToString,
-            proto_dot_user__cart__pb2.CartResponse.FromString,
+            user__cart__pb2.UpdateCartRequest.SerializeToString,
+            user__cart__pb2.CartResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -241,8 +241,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/RemoveFromCart',
-            proto_dot_user__cart__pb2.UpdateCartRequest.SerializeToString,
-            proto_dot_user__cart__pb2.CartResponse.FromString,
+            user__cart__pb2.UpdateCartRequest.SerializeToString,
+            user__cart__pb2.CartResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -258,8 +258,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/GetCart',
-            proto_dot_user__cart__pb2.UserRequest.SerializeToString,
-            proto_dot_user__cart__pb2.CartResponse.FromString,
+            user__cart__pb2.UserRequest.SerializeToString,
+            user__cart__pb2.CartResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -275,8 +275,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/Checkout',
-            proto_dot_user__cart__pb2.UserRequest.SerializeToString,
-            proto_dot_user__cart__pb2.CheckoutResponse.FromString,
+            user__cart__pb2.UserRequest.SerializeToString,
+            user__cart__pb2.CheckoutResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -292,8 +292,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/ReplicateCart',
-            proto_dot_user__cart__pb2.ReplicateCartRequest.SerializeToString,
-            proto_dot_user__cart__pb2.Empty.FromString,
+            user__cart__pb2.ReplicateCartRequest.SerializeToString,
+            user__cart__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -309,8 +309,8 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/ReplicateUser',
-            proto_dot_user__cart__pb2.ReplicateUserRequest.SerializeToString,
-            proto_dot_user__cart__pb2.Empty.FromString,
+            user__cart__pb2.ReplicateUserRequest.SerializeToString,
+            user__cart__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -326,7 +326,7 @@ class UserCartService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/usercart.UserCartService/Heartbeat',
-            proto_dot_user__cart__pb2.HeartbeatRequest.SerializeToString,
-            proto_dot_user__cart__pb2.HeartbeatResponse.FromString,
+            user__cart__pb2.HeartbeatRequest.SerializeToString,
+            user__cart__pb2.HeartbeatResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

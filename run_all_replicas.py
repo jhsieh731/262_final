@@ -1,6 +1,7 @@
 import subprocess
 import os
 import json
+import time
 
 def load_config():
     with open("config.json") as f:
@@ -28,6 +29,7 @@ def run_replicas(kind, replicas, script_name):
         print(f"[launch] {name} on {host}:{port}")
         proc = subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
         processes[name] = (proc, logfile)
+        time.sleep(0.3) 
     return processes
 
 def main():

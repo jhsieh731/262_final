@@ -2,16 +2,22 @@
   "shard1": [
     {"host": "localhost", "port": 5000, "db": "db/shard1_replica0.db"},
     {"host": "localhost", "port": 5001, "db": "db/shard1_replica1.db"},
-    {"host": "localhost", "port": 5002, "db": "db/shard1_replica2.db"}
+    {"host": "localhost", "port": 5002, "db": "db/shard1_replica2.db"},
+    {"host": "localhost", "port": 5003, "db": "db/shard1_replica3.db"},
+    {"host": "localhost", "port": 5004, "db": "db/shard1_replica4.db"}
   ],
   "shard2": [
     {"host": "localhost", "port": 6000, "db": "db/shard2_replica0.db"},
     {"host": "localhost", "port": 6001, "db": "db/shard2_replica1.db"},
-    {"host": "localhost", "port": 6002, "db": "db/shard2_replica2.db"}
+    {"host": "localhost", "port": 6002, "db": "db/shard2_replica2.db"},
+    {"host": "localhost", "port": 6003, "db": "db/shard2_replica3.db"},
+    {"host": "localhost", "port": 6004, "db": "db/shard2_replica4.db"}
   ],
   "itinerary": [
     {"host": "localhost", "port": 7100, "db": "db/itinerary_replica0.db"},
     {"host": "localhost", "port": 7101, "db": "db/itinerary_replica1.db"},
-    {"host": "localhost", "port": 7102, "db": "db/itinerary_replica2.db"}
+    {"host": "localhost", "port": 7102, "db": "db/itinerary_replica2.db"},
+    {"host": "localhost", "port": 7103, "db": "db/itinerary_replica3.db"},
+    {"host": "localhost", "port": 7104, "db": "db/itinerary_replica4.db"}
   ]
 }

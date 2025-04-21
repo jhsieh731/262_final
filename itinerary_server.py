@@ -1,202 +1,3 @@
-# import grpc
-# from concurrent import futures
-# import threading
-# import time
-# import sqlite3
-# import logging
-# import argparse
-
-# import sys
-# import os
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-# from proto import itinerary_pb2, itinerary_pb2_grpc
-
-# HEARTBEAT_INTERVAL = 2
-# LEADER_TIMEOUT = 10
-
-# class ItineraryServer(itinerary_pb2_grpc.ItineraryServiceServicer):
-#     def __init__(self, host, port, peers, db_path):
-#         self.host = host
-#         self.port = port
-#         self.peers = peers
-#         self.address = (host, port)
-#         self.last_seen = {}
-#         self.is_leader = False
-#         self.subscribers = []
-
-#         # Logging
-#         os.makedirs("logs", exist_ok=True)
-#         self.logger = logging.getLogger(f"itinerary_server_{host}_{port}")
-#         self.logger.setLevel(logging.DEBUG)
-
-#         handler = logging.StreamHandler(sys.stdout)
-#         formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s")
-#         handler.setFormatter(formatter)
-#         self.logger.addHandler(handler)
-
-#         self.db_conn = sqlite3.connect(db_path, check_same_thread=False)
-#         self.db_conn.row_factory = sqlite3.Row
-
-#         self._init_db()
-#         self._start_heartbeat_thread()
-#         self.logger.info(f"Itinerary server started at {host}:{port}")
-
-#     def _init_db(self):
-#         cur = self.db_conn.cursor()
-#         cur.execute("""
-#             CREATE TABLE IF NOT EXISTS itinerary (
-#                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-#                 name TEXT,
-#                 number INTEGER
-#             );
-#         """)
-#         cur.execute("SELECT COUNT(*) FROM itinerary")
-#         if cur.fetchone()[0] == 0:
-#             for name in ['Flight', 'Hotel', 'Car']:
-#                 cur.execute("INSERT INTO itinerary (name, number) VALUES (?, ?)", (name, 10))
-#         self.db_conn.commit()
-#         self.logger.info("Database initialized with default itinerary items.")
-#         cur.close()
-
-#     def _start_heartbeat_thread(self):
-#         threading.Thread(target=self._heartbeat_loop, daemon=True).start()
-
-#     def _heartbeat_loop(self):
-#         while True:
-#             for host, port in self.peers:
-#                 try:
-#                     with grpc.insecure_channel(f"{host}:{port}") as channel:
-#                         stub = itinerary_pb2_grpc.ItineraryServiceStub(channel)
-#                         resp = stub.Heartbeat(itinerary_pb2.HeartbeatRequest(
-#                             host=self.host, port=self.port), timeout=0.5)
-#                         self.last_seen[(host, port)] = time.time()
-#                 except grpc.RpcError:
-#                     pass
-
-#             alive = [addr for addr in self.peers if time.time() - self.last_seen.get(addr, 0) < LEADER_TIMEOUT]
-#             alive.append(self.address)
-#             prev = self.is_leader
-#             self.is_leader = self.address == min(alive)
-#             if self.is_leader != prev:
-#                 if self.is_leader:
-#                     self.logger.info(f"Server {self.address} is now the leader. Alive peers: {alive}")
-#                 else:
-#                     self.logger.info(f"Server {self.address} is no longer the leader. Alive peers: {alive}")
-
-#             time.sleep(HEARTBEAT_INTERVAL)
-
-#     def Heartbeat(self, request, context):
-#         # self.logger.debug(f"Heartbeat from {request.host}:{request.port}")
-#         return itinerary_pb2.HeartbeatResponse(is_leader=self.is_leader)
-
-#     def GetItinerary(self, request, context):
-#         return self._get_itinerary_list()
-
-#     def StreamItineraryChanges(self, request, context):
-#         self.logger.info(f"Client {context.peer()} subscribed to itinerary stream")
-
-#         if not self.is_leader:
-#             self.logger.info("Not the leader; returning empty stream")
-#             return
-
-#         try:
-#             # Send current state once
-#             yield self._get_itinerary_list()
-
-#             # Keep alive (no-op yields)
-#             while True:
-#                 time.sleep(60)  # Keep stream open to simulate liveness
-#         except grpc.RpcError:
-#             self.logger.info(f"Client {context.peer()} disconnected")
-
-
-
-#     def UpdateItinerary(self, request, context):
-#         if not self.is_leader:
-#             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
-#             context.set_details("Not leader")
-#             return itinerary_pb2.UpdateResponse()
-
-#         cur = self.db_conn.cursor()
-#         cur.execute("UPDATE itinerary SET number = number - ? WHERE id = ? AND number >= ?",
-#                     (request.quantity_change, request.itinerary_id, request.quantity_change))
-#         self.db_conn.commit()
-#         self.logger.info(f"Updated itinerary {request.itinerary_id} by {request.quantity_change}")
-#         cur.close()
-
-#         self._replicate_update(request.itinerary_id, request.quantity_change)
-#         self._broadcast_updates()
-#         return itinerary_pb2.UpdateResponse(success=True)
-
-#     def ReplicateItinerary(self, request, context):
-#         cur = self.db_conn.cursor()
-#         cur.execute("UPDATE itinerary SET number = number - ? WHERE id = ? AND number >= ?",
-#                     (request.quantity_change, request.itinerary_id, request.quantity_change))
-#         self.db_conn.commit()
-#         self.logger.info(f"Replicated itinerary {request.itinerary_id} by {request.quantity_change}")
-#         cur.close()
-
-#         self._broadcast_updates()
-#         return itinerary_pb2.Empty()
-
-#     def _broadcast_updates(self):
-#         itinerary_list = self._get_itinerary_list()
-#         for context in self.subscribers[:]:
-#             try:
-#                 context.write(itinerary_list)
-#             except grpc.RpcError:
-#                 self.logger.debug(f"Client {context.peer()} disconnected")
-#                 self.subscribers.remove(context)
-
-#     def _get_itinerary_list(self):
-#         cur = self.db_conn.cursor()
-#         cur.execute("SELECT id, name, number FROM itinerary")
-#         items = [
-#             itinerary_pb2.ItineraryItem(id=row["id"], name=row["name"], number=row["number"])
-#             for row in cur.fetchall()
-#         ]
-#         cur.close()
-#         self.logger.debug(f"Fetched itinerary list: {items}")
-#         return itinerary_pb2.ItineraryList(items=items)
-
-#     def _replicate_update(self, itinerary_id, quantity_change):
-#         for host, port in self.peers:
-#             try:
-#                 with grpc.insecure_channel(f"{host}:{port}") as channel:
-#                     stub = itinerary_pb2_grpc.ItineraryServiceStub(channel)
-#                     stub.ReplicateItinerary(itinerary_pb2.UpdateRequest(
-#                         itinerary_id=itinerary_id,
-#                         quantity_change=quantity_change
-#                     ), timeout=1)
-#             except grpc.RpcError:
-#                 self.logger.warning(f"Failed to replicate update to {host}:{port}")
-#                 pass
-
-
-# def serve(host, port, peers, db_path):
-#     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-#     servicer = ItineraryServer(host, port, peers, db_path)
-#     itinerary_pb2_grpc.add_ItineraryServiceServicer_to_server(servicer, server)
-#     server.add_insecure_port(f"{host}:{port}")
-#     server.start()
-#     server.wait_for_termination()
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--host", required=True)
-#     parser.add_argument("--port", type=int, required=True)
-#     parser.add_argument("--peers", required=True)
-#     parser.add_argument("--db", required=True)
-
-#     args = parser.parse_args()
-#     peer_list = [tuple(p.split(":")) for p in args.peers.split(",")]
-#     peer_list = [(h, int(p)) for h, p in peer_list]
-
-#     serve(args.host, args.port, peer_list, args.db)
-
-
-
 import grpc
 from concurrent import futures
 import threading
@@ -204,28 +5,35 @@ import time
 import sqlite3
 import logging
 import argparse
+import json
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from proto import itinerary_pb2, itinerary_pb2_grpc
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "proto")))
 
-HEARTBEAT_INTERVAL = 2
-LEADER_TIMEOUT = 10
+from proto import itinerary_pb2, itinerary_pb2_grpc
+from proto import raft_pb2, raft_pb2_grpc
+from raft_node import RaftNode
+from raft_node import set_raft_logger  # Assuming this exists as in shard_server.py
 
 class ItineraryServer(itinerary_pb2_grpc.ItineraryServiceServicer):
     def __init__(self, host, port, peers, db_path):
         self.host = host
         self.port = port
         self.peers = peers
-        self.address = (host, port)
-        self.last_seen = {}
-        self.is_leader = False
+        self.db_path = db_path
+        
+        # Establish a unique node id string, e.g., "localhost:5000"
+        self.node_id = f"{host}:{port}"
 
-        self.db_conn = sqlite3.connect(db_path, check_same_thread=False)
+        # Set up database connection
+        self.db_conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.db_conn.row_factory = sqlite3.Row
+        
+        # Initialize database
+        self._init_db()
 
-        # Logging
+        # Setup logging
         os.makedirs("logs", exist_ok=True)
         self.logger = logging.getLogger(f"itinerary_server_{host}_{port}")
         self.logger.setLevel(logging.DEBUG)
@@ -234,57 +42,88 @@ class ItineraryServer(itinerary_pb2_grpc.ItineraryServiceServicer):
         formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
-
-        self._init_db()
-        self._start_heartbeat_thread()
-        self.logger.info(f"Itinerary server started at {host}:{port}")
+        
+        self.logger.info(f"Shard server started at {host}:{port} with Raft node id {self.node_id}")
+        print(f"Shard server started at {host}:{port} with Raft node id {self.node_id}")
 
     def _init_db(self):
+        """Initialize the itinerary database"""
         cur = self.db_conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS itinerary (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT,
-                number INTEGER
+                name TEXT NOT NULL,
+                number INTEGER NOT NULL DEFAULT 0
             );
         """)
+        
+        # Initialize with sample data if empty
         cur.execute("SELECT COUNT(*) FROM itinerary")
         if cur.fetchone()[0] == 0:
-            for name in ['Apple', 'Banana', 'Carrot']:
-                cur.execute("INSERT INTO itinerary (name, number) VALUES (?, ?)", (name, 100))
+            sample_data = [
+                ("Flight to Paris", 10),
+                ("Hotel in Rome", 20),
+                ("Car Rental in London", 15),
+                ("Beach Resort in Bali", 5),
+                ("Mountain Retreat in Switzerland", 8)
+            ]
+            for name, number in sample_data:
+                cur.execute("INSERT INTO itinerary (name, number) VALUES (?, ?)", (name, number))
+        
         self.db_conn.commit()
 
-    def _start_heartbeat_thread(self):
-        threading.Thread(target=self._heartbeat_loop, daemon=True).start()
-
-    def _heartbeat_loop(self):
-        while True:
-            for host, port in self.peers:
-                try:
-                    with grpc.insecure_channel(f"{host}:{port}") as channel:
-                        stub = itinerary_pb2_grpc.ItineraryServiceStub(channel)
-                        resp = stub.Heartbeat(itinerary_pb2.HeartbeatRequest(
-                            host=self.host, port=self.port), timeout=0.5)
-                        self.last_seen[(host, port)] = time.time()
-                except grpc.RpcError:
-                    pass
-
-            alive = [addr for addr in self.peers if time.time() - self.last_seen.get(addr, 0) < LEADER_TIMEOUT]
-            alive.append(self.address)
-            prev = self.is_leader
-            self.is_leader = self.address == min(alive)
-            if self.is_leader != prev:
-                if self.is_leader:
-                    self.logger.info(f"Server {self.address} is now the leader. Alive: {alive}")
-                else:
-                    self.logger.info(f"Server {self.address} is no longer the leader. Alive: {alive}")
-
-            time.sleep(HEARTBEAT_INTERVAL)
+    def apply_command(self, command):
+        """
+        Apply commands from the Raft log to the state machine.
+        Commands are JSON strings encoding operations.
+        """
+        try:
+            cmd = json.loads(command)
+            action = cmd.get("action")
+            
+            if action == "update_itinerary":
+                itinerary_id = cmd.get("itinerary_id")
+                quantity_change = cmd.get("quantity_change")
+                
+                cur = self.db_conn.cursor()
+                # Check if we have enough inventory
+                if quantity_change < 0:  # We're decreasing inventory (booking)
+                    cur.execute("SELECT number FROM itinerary WHERE id = ?", (itinerary_id,))
+                    row = cur.fetchone()
+                    if row and row["number"] < abs(quantity_change):
+                        self.logger.warning(f"Not enough inventory for item {itinerary_id}")
+                        return False
+                
+                # Update the inventory
+                cur.execute(
+                    "UPDATE itinerary SET number = number + ? WHERE id = ?",
+                    (quantity_change, itinerary_id)
+                )
+                self.db_conn.commit()
+                self.logger.info(f"Applied update_itinerary: item {itinerary_id}, change {quantity_change}")
+                return True
+            else:
+                self.logger.warning(f"Unknown command action: {action}")
+                return False
+        except Exception as e:
+            self.logger.error(f"Error applying command: {e}", exc_info=True)
+            return False
 
     def Heartbeat(self, request, context):
-        return itinerary_pb2.HeartbeatResponse(is_leader=self.is_leader)
+        """Return whether this node is the Raft leader"""
+        is_leader = hasattr(self, 'raft_node') and self.raft_node.state == "Leader"
+        
+        if is_leader:
+            return itinerary_pb2.HeartbeatResponse(is_leader=True)
+        else:
+            # If we have a reference to the leader, return it in the error details
+            leader = getattr(self.raft_node, 'current_leader', None) if hasattr(self, 'raft_node') else None
+            context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
+            context.set_details(f'Not leader. Current leader: {leader if leader else "unknown"}')
+            return itinerary_pb2.HeartbeatResponse(is_leader=False)
 
     def GetItinerary(self, request, context):
+        """Get all itinerary items - read-only operation can be handled by any node"""
         cur = self.db_conn.cursor()
         cur.execute("SELECT id, name, number FROM itinerary")
         items = [
@@ -294,48 +133,85 @@ class ItineraryServer(itinerary_pb2_grpc.ItineraryServiceServicer):
         return itinerary_pb2.ItineraryList(items=items)
 
     def UpdateItinerary(self, request, context):
-        if not self.is_leader:
+        """Update an itinerary item - write operation requires consensus"""
+        if not hasattr(self, 'raft_node'):
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft is still initializing")
+            return itinerary_pb2.UpdateResponse(success=False)
+        
+        if self.raft_node.state != "Leader":
+            leader = getattr(self.raft_node, 'current_leader', None)
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
-            context.set_details("Not leader")
-            return itinerary_pb2.UpdateResponse()
+            context.set_details(f'Not leader. Current leader: {leader if leader else "unknown"}')
+            return itinerary_pb2.UpdateResponse(success=False)
 
-        cur = self.db_conn.cursor()
-        cur.execute("UPDATE itinerary SET number = number - ? WHERE id = ? AND number >= ?",
-                    (request.quantity_change, request.itinerary_id, request.quantity_change))
-        self.db_conn.commit()
-        self.logger.info(f"Updated itinerary {request.itinerary_id} by {request.quantity_change}")
-        self._replicate_update(request.itinerary_id, request.quantity_change)
-        return itinerary_pb2.UpdateResponse(success=True)
+        # Construct command as JSON
+        command = json.dumps({
+            "action": "update_itinerary",
+            "itinerary_id": request.itinerary_id,
+            "quantity_change": request.quantity_change
+        })
+        
+        success = self.raft_node.submit_command(command)
+        return itinerary_pb2.UpdateResponse(success=success)
 
-    def ReplicateItinerary(self, request, context):
-        cur = self.db_conn.cursor()
-        cur.execute("UPDATE itinerary SET number = number - ? WHERE id = ? AND number >= ?",
-                    (request.quantity_change, request.itinerary_id, request.quantity_change))
-        self.db_conn.commit()
-        self.logger.info(f"Replicated itinerary {request.itinerary_id} by {request.quantity_change}")
-        return itinerary_pb2.Empty()
+class RaftService(raft_pb2_grpc.RaftServiceServicer):
+    def __init__(self):
+        self.raft_node = None
 
-    def _replicate_update(self, itinerary_id, quantity_change):
-        for host, port in self.peers:
-            try:
-                with grpc.insecure_channel(f"{host}:{port}") as channel:
-                    stub = itinerary_pb2_grpc.ItineraryServiceStub(channel)
-                    stub.ReplicateItinerary(itinerary_pb2.UpdateRequest(
-                        itinerary_id=itinerary_id,
-                        quantity_change=quantity_change
-                    ), timeout=1)
-            except grpc.RpcError:
-                pass
+    def attach(self, raft_node):
+        self.raft_node = raft_node
 
+    def RequestVote(self, request, context):
+        print(f"[RaftService RequestVote] Received RequestVote from {request.candidate_id} in term {request.term}")
+        if not self.raft_node:
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft node not ready")
+            return raft_pb2.RequestVoteResponse(term=0, vote_granted=False)
+        return self.raft_node.handle_request_vote(request, context)
+
+    def AppendEntries(self, request, context):
+        print(f"[RaftService AppendEntries] Received AppendEntries from {request.leader_id} in term {request.term}")
+        if not self.raft_node:
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft node not ready")
+            return raft_pb2.AppendEntriesResponse(term=0, success=False)
+        print("got past the raft node check")
+        return self.raft_node.handle_append_entries(request, context)
 
 def serve(host, port, peers, db_path):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    servicer = ItineraryServer(host, port, peers, db_path)
-    itinerary_pb2_grpc.add_ItineraryServiceServicer_to_server(servicer, server)
+    itinerary = ItineraryServer(host, port, peers, db_path)
+
+    # Create RaftService with placeholder
+    raft_service = RaftService()
+    raft_pb2_grpc.add_RaftServiceServicer_to_server(raft_service, server)
+    itinerary_pb2_grpc.add_ItineraryServiceServicer_to_server(itinerary, server)
+
+    # Start gRPC
     server.add_insecure_port(f"{host}:{port}")
     server.start()
-    server.wait_for_termination()
+    itinerary.logger.info(f"[boot] gRPC server running at {host}:{port}")
 
+    # Wait for gRPC server to fully start
+    time.sleep(3.0)
+    
+    # Create a single raft node
+    raft_node = RaftNode(
+        node_id=f"{host}:{port}",
+        peers=peers,
+        apply_command_callback=itinerary.apply_command
+    )
+    
+    # Set logger for the raft node
+    set_raft_logger(itinerary.logger)
+    
+    # Attach to both service objects
+    raft_service.attach(raft_node)
+    itinerary.raft_node = raft_node
+    itinerary.logger.info(f"RaftNode attached to RaftService")
+
+    server.wait_for_termination()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

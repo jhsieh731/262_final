@@ -6,11 +6,19 @@ import random
 import sqlite3
 import logging
 import argparse
+import json  # for encoding/decoding commands
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "proto")))
+
 from proto import user_cart_pb2, user_cart_pb2_grpc
+from proto import raft_pb2, raft_pb2_grpc
+from raft_node import RaftNode
+
+from raft_node import set_raft_logger  # 👈 you’ll define this
+
+
 
 HEARTBEAT_INTERVAL = 2
 LEADER_TIMEOUT = 5
@@ -22,29 +30,31 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         self.peers = peers
         self.address = (host, port)
         self.db_path = db_path
+        # Remove old is_leader and heartbeat fields.
+        
+        # Establish a unique node id string, e.g., "localhost:5000"
+        self.node_id = f"{host}:{port}"
 
-        self.is_leader = False
-        self.last_seen = {}
-
+        # Set up database connection, logging, etc.
         self.db_conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.db_conn.row_factory = sqlite3.Row
+        # (Logging and DB initialization code remains unchanged)
+        self._init_db()
 
-        # logging setup
-        logger = logging.getLogger(f"shard_server_{host}_{port}")
-        logger.setLevel(logging.DEBUG)
+        # logger
+         # Logging
+        os.makedirs("logs", exist_ok=True)
+        self.logger = logging.getLogger(f"itinerary_server_{host}_{port}")
+        self.logger.setLevel(logging.DEBUG)
 
         handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            "%(asctime)s [%(levelname)s] [%(threadName)s] %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
         handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        self.logger = logger
+        self.logger.addHandler(handler)
 
-        # Start stuff
-        self._init_db()
-        self._start_heartbeat_thread()
-        self.logger.info(f"Shard server started at {host}:{port}")
+        # Start the Raft service in this server's gRPC server (see serve() below)
+        self.logger.info(f"Shard server started at {host}:{port} with Raft node id {self.node_id}")
+        print(f"Shard server started at {host}:{port} with Raft node id {self.node_id}")
 
     def _init_db(self):
         cur = self.db_conn.cursor()
@@ -65,36 +75,71 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         """)
         self.db_conn.commit()
 
-    def _start_heartbeat_thread(self):
-        threading.Thread(target=self._heartbeat_loop, daemon=True).start()
+    def apply_command(self, command):
+        """
+        Decodes the command (a JSON string) and performs the appropriate update.
+        For example, for CreateAccount, AddToCart, or RemoveFromCart operations.
+        """
+        try:
+            cmd = json.loads(command)
+        except Exception as e:
+            self.logger.error(f"Failed to decode command: {command}, error: {e}")
+            return
 
-    def _heartbeat_loop(self):
-        while True:
-            for host, port in self.peers:
-                try:
-                    with grpc.insecure_channel(f"{host}:{port}") as channel:
-                        stub = user_cart_pb2_grpc.UserCartServiceStub(channel)
-                        response = stub.Heartbeat(user_cart_pb2.HeartbeatRequest(
-                            host=self.host, port=self.port), timeout=0.5)
-                        self.last_seen[(host, port)] = time.time()
-                except grpc.RpcError:
-                    pass
+        action = cmd.get("action")
+        if action == "create_account":
+            username = cmd.get("username")
+            cur = self.db_conn.cursor()
+            try:
+                cur.execute("INSERT INTO users (username) VALUES (?)", (username,))
+                self.db_conn.commit()
+                self.logger.info(f"Applied create_account: {username}")
+            except sqlite3.IntegrityError:
+                self.logger.info(f"Account already exists: {username}")
+        elif action == "add_to_cart":
+            user_id = cmd.get("user_id")
+            itinerary_id = cmd.get("itinerary_id")
+            quantity = cmd.get("quantity")
+            cur = self.db_conn.cursor()
+            cur.execute("""
+                SELECT quantity, is_deleted FROM cart 
+                WHERE user_id = ? AND itinerary_id = ?
+            """, (user_id, itinerary_id))
+            row = cur.fetchone()
+            if row:
+                new_quantity = row["quantity"] + quantity if not row["is_deleted"] else quantity
+                cur.execute("""
+                    UPDATE cart 
+                    SET quantity = ?, is_deleted = 0 
+                    WHERE user_id = ? AND itinerary_id = ?
+                """, (new_quantity, user_id, itinerary_id))
+            else:
+                cur.execute("""
+                    INSERT INTO cart (user_id, itinerary_id, quantity, is_deleted)
+                    VALUES (?, ?, ?, 0)
+                """, (user_id, itinerary_id, quantity))
+            self.db_conn.commit()
+            self.logger.info(f"Applied add_to_cart for user {user_id}, itinerary {itinerary_id}")
+        elif action == "remove_from_cart":
+            user_id = cmd.get("user_id")
+            itinerary_id = cmd.get("itinerary_id")
+            cur = self.db_conn.cursor()
+            cur.execute("UPDATE cart SET is_deleted = 1 WHERE user_id = ? AND itinerary_id = ?",
+                        (user_id, itinerary_id))
+            self.db_conn.commit()
+            self.logger.info(f"Applied remove_from_cart for user {user_id}, itinerary {itinerary_id}")
+        elif action == "checkout":
+            user_id = cmd.get("user_id")
+            cur = self.db_conn.cursor()
+            cur.execute("UPDATE cart SET is_deleted = 1 WHERE user_id = ?", (user_id,))
+            self.db_conn.commit()
+            self.logger.info(f"Applied checkout for user {user_id}")
 
-            alive_peers = [addr for addr in self.peers
-                           if time.time() - self.last_seen.get(addr, 0) < LEADER_TIMEOUT]
-            alive_peers.append(self.address)
-            prev = self.is_leader
-            self.is_leader = self.address == min(alive_peers)
-            if self.is_leader != prev:
-                if self.is_leader:
-                    self.logger.info(f"Server {self.address} is now the leader. Alive peers: {alive_peers}")
-                else:
-                    self.logger.info(f"Server {self.address} is no longer the leader. Alive peers: {alive_peers}")
-
-            time.sleep(HEARTBEAT_INTERVAL)
 
     def Heartbeat(self, request, context):
-        return user_cart_pb2.HeartbeatResponse(is_leader=self.is_leader)
+        """Return whether this node is the Raft leader"""
+        is_leader = hasattr(self, 'raft_node') and self.raft_node.state == "Leader"
+        return user_cart_pb2.HeartbeatResponse(is_leader=is_leader)
 
     def Login(self, request, context):
         cur = self.db_conn.cursor()
@@ -105,65 +150,74 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         return user_cart_pb2.LoginResponse(success=False)
 
     def CreateAccount(self, request, context):
-        if not self.is_leader:
+        if not hasattr(self, 'raft_node'):
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft is still initializing")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        if self.raft_node.state != "Leader":
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
             context.set_details('Not leader')
             return user_cart_pb2.CreateAccountResponse()
+        # Construct command as JSON
+        command = json.dumps({
+            "action": "create_account",
+            "username": request.username
+        })
+        if self.raft_node.submit_command(command):
+            # You could later query the local DB to get the new account's id.
+            cur = self.db_conn.cursor()
+            cur.execute("SELECT user_id FROM users WHERE username=?", (request.username,))
+            row = cur.fetchone()
+            if row:
+                return user_cart_pb2.CreateAccountResponse(success=True, user_id=row["user_id"])
+        return user_cart_pb2.CreateAccountResponse(success=False)
 
-        cur = self.db_conn.cursor()
-        try:
-            cur.execute("INSERT INTO users (username) VALUES (?)", (request.username,))
-            user_id = cur.lastrowid
-            self.db_conn.commit()
-            self._replicate_user(user_id, request.username)
-            return user_cart_pb2.CreateAccountResponse(success=True, user_id=user_id)
-        except sqlite3.IntegrityError:
-            return user_cart_pb2.CreateAccountResponse(success=False)
     
     def AddToCart(self, request, context):
-        if not self.is_leader:
+        if not hasattr(self, 'raft_node'):
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft is still initializing")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        if self.raft_node.state != "Leader":
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
             context.set_details('Not leader')
             return user_cart_pb2.CartResponse()
 
-        cur = self.db_conn.cursor()
-        cur.execute("""
-            SELECT quantity, is_deleted FROM cart 
-            WHERE user_id = ? AND itinerary_id = ?
-        """, (request.user_id, request.itinerary_id))
-        row = cur.fetchone()
+        command = json.dumps({
+            "action": "add_to_cart",
+            "user_id": request.user_id,
+            "itinerary_id": request.itinerary_id,
+            "quantity": request.quantity
+        })
 
-        if row:
-            # Update existing cart item (even if marked deleted previously)
-            new_quantity = row["quantity"] + request.quantity if not row["is_deleted"] else request.quantity
-            cur.execute("""
-                UPDATE cart 
-                SET quantity = ?, is_deleted = 0 
-                WHERE user_id = ? AND itinerary_id = ?
-            """, (new_quantity, request.user_id, request.itinerary_id))
+        success = self.raft_node.submit_command(command)
+        if success:
+            return self.GetCart(user_cart_pb2.UserRequest(user_id=request.user_id), context)
         else:
-            # Insert new cart item
-            cur.execute("""
-                INSERT INTO cart (user_id, itinerary_id, quantity, is_deleted)
-                VALUES (?, ?, ?, 0)
-            """, (request.user_id, request.itinerary_id, request.quantity))
-
-        self.db_conn.commit()
-        self._replicate_cart(request.user_id, request.itinerary_id, request.quantity, False)
-        return self.GetCart(user_cart_pb2.UserRequest(user_id=request.user_id), context)
+            return user_cart_pb2.CartResponse()
 
     def RemoveFromCart(self, request, context):
-        if not self.is_leader:
+        if not hasattr(self, 'raft_node'):
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft is still initializing")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        if self.raft_node.state != "Leader":
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
             context.set_details('Not leader')
             return user_cart_pb2.CartResponse()
 
-        cur = self.db_conn.cursor()
-        cur.execute("UPDATE cart SET is_deleted = 1 WHERE user_id = ? AND itinerary_id = ?",
-                    (request.user_id, request.itinerary_id))
-        self.db_conn.commit()
-        self._replicate_cart(request.user_id, request.itinerary_id, 0, True)
-        return self.GetCart(user_cart_pb2.UserRequest(user_id=request.user_id), context)
+        command = json.dumps({
+            "action": "remove_from_cart",
+            "user_id": request.user_id,
+            "itinerary_id": request.itinerary_id
+        })
+
+        success = self.raft_node.submit_command(command)
+        if success:
+            return self.GetCart(user_cart_pb2.UserRequest(user_id=request.user_id), context)
+        else:
+            return user_cart_pb2.CartResponse()
+
 
     def GetCart(self, request, context):
         cur = self.db_conn.cursor()
@@ -174,69 +228,85 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         return user_cart_pb2.CartResponse(items=items)
 
     def Checkout(self, request, context):
-        if not self.is_leader:
+        if not hasattr(self, 'raft_node'):
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft is still initializing")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        if self.raft_node.state != "Leader":
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
             context.set_details('Not leader')
             return user_cart_pb2.CheckoutResponse()
-        cur = self.db_conn.cursor()
-        cur.execute("UPDATE cart SET is_deleted = 1 WHERE user_id = ?", (request.user_id,))
-        self.db_conn.commit()
-        return user_cart_pb2.CheckoutResponse(success=True)
 
-    def ReplicateUser(self, request, context):
-        cur = self.db_conn.cursor()
-        try:
-            cur.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)",
-                        (request.user_id, request.username))
-            self.db_conn.commit()
-        except:
-            pass
-        return user_cart_pb2.Empty()
+        command = json.dumps({
+            "action": "checkout",
+            "user_id": request.user_id
+        })
 
-    def ReplicateCart(self, request, context):
-        cur = self.db_conn.cursor()
-        cur.execute("SELECT * FROM cart WHERE user_id = ? AND itinerary_id = ?",
-                    (request.user_id, request.itinerary_id))
-        if cur.fetchone():
-            cur.execute("UPDATE cart SET quantity = ?, is_deleted = ? WHERE user_id = ? AND itinerary_id = ?",
-                        (request.quantity, int(request.is_deleted), request.user_id, request.itinerary_id))
-        else:
-            cur.execute("INSERT INTO cart (user_id, itinerary_id, quantity, is_deleted) VALUES (?, ?, ?, ?)",
-                        (request.user_id, request.itinerary_id, request.quantity, int(request.is_deleted)))
-        self.db_conn.commit()
-        return user_cart_pb2.Empty()
+        success = self.raft_node.submit_command(command)
+        return user_cart_pb2.CheckoutResponse(success=success)
 
-    def _replicate_user(self, user_id, username):
-        for host, port in self.peers:
-            try:
-                with grpc.insecure_channel(f"{host}:{port}") as channel:
-                    stub = user_cart_pb2_grpc.UserCartServiceStub(channel)
-                    stub.ReplicateUser(user_cart_pb2.ReplicateUserRequest(
-                        user_id=user_id, username=username), timeout=1)
-            except grpc.RpcError:
-                pass
+class RaftService(raft_pb2_grpc.RaftServiceServicer):
+    def __init__(self):
+        self.raft_node = None
 
-    def _replicate_cart(self, user_id, itinerary_id, quantity, is_deleted):
-        for host, port in self.peers:
-            try:
-                with grpc.insecure_channel(f"{host}:{port}") as channel:
-                    stub = user_cart_pb2_grpc.UserCartServiceStub(channel)
-                    stub.ReplicateCart(user_cart_pb2.ReplicateCartRequest(
-                        user_id=user_id,
-                        itinerary_id=itinerary_id,
-                        quantity=quantity,
-                        is_deleted=is_deleted), timeout=1)
-            except grpc.RpcError:
-                pass
+    def attach(self, raft_node):
+        self.raft_node = raft_node
+
+    def RequestVote(self, request, context):
+        print(f"[RaftService RequestVote] Received RequestVote from {request.candidate_id} in term {request.term}")
+        if not self.raft_node:
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft node not ready")
+            return raft_pb2.RequestVoteResponse(term=0, vote_granted=False)
+        return self.raft_node.handle_request_vote(request, context)
+
+    def AppendEntries(self, request, context):
+        print(f"[RaftService AppendEntries] Received AppendEntries from {request.leader_id} in term {request.term}")
+        if not self.raft_node:
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Raft node not ready")
+            return raft_pb2.AppendEntriesResponse(term=0, success=False)
+        print("got past the raft node check")
+        return self.raft_node.handle_append_entries(request, context)
+
 
 
 def serve(host, port, peers, db_path):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     shard = ShardServer(host, port, peers, db_path)
+
+    # Create RaftService with placeholder
+    raft_service = RaftService()
+    raft_pb2_grpc.add_RaftServiceServicer_to_server(raft_service, server)
     user_cart_pb2_grpc.add_UserCartServiceServicer_to_server(shard, server)
+
+    # Start gRPC
     server.add_insecure_port(f"{host}:{port}")
     server.start()
+    shard.logger.info(f"[boot] gRPC server running at {host}:{port}")
+
+    # IMPORTANT: Remove the raft_node initialization from ShardServer.__init__
+    # And only initialize it here after the server has started
+    time.sleep(3.0)  # Wait for gRPC server to fully start
+    
+    # Create a single raft node
+    raft_node = RaftNode(
+        node_id=f"{host}:{port}",
+        peers=peers,
+        apply_command_callback=shard.apply_command
+    )
+    
+    # Set logger for the raft node
+    set_raft_logger(shard.logger)
+    
+    # Attach to both service objects
+    raft_service.attach(raft_node)
+    shard.raft_node = raft_node
+    shard.logger.info(f"RaftNode attached to RaftService")
+
     server.wait_for_termination()
+
+
 
 
 if __name__ == "__main__":

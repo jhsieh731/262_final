@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from proto import itinerary_pb2 as proto_dot_itinerary__pb2
+import itinerary_pb2 as itinerary__pb2
 
 
 class ItineraryServiceStub(object):
@@ -16,28 +16,28 @@ class ItineraryServiceStub(object):
         """
         self.GetItinerary = channel.unary_unary(
                 '/itinerary.ItineraryService/GetItinerary',
-                request_serializer=proto_dot_itinerary__pb2.Empty.SerializeToString,
-                response_deserializer=proto_dot_itinerary__pb2.ItineraryList.FromString,
+                request_serializer=itinerary__pb2.Empty.SerializeToString,
+                response_deserializer=itinerary__pb2.ItineraryList.FromString,
                 )
         self.UpdateItinerary = channel.unary_unary(
                 '/itinerary.ItineraryService/UpdateItinerary',
-                request_serializer=proto_dot_itinerary__pb2.UpdateRequest.SerializeToString,
-                response_deserializer=proto_dot_itinerary__pb2.UpdateResponse.FromString,
+                request_serializer=itinerary__pb2.UpdateRequest.SerializeToString,
+                response_deserializer=itinerary__pb2.UpdateResponse.FromString,
                 )
         self.StreamItineraryChanges = channel.unary_stream(
                 '/itinerary.ItineraryService/StreamItineraryChanges',
-                request_serializer=proto_dot_itinerary__pb2.Empty.SerializeToString,
-                response_deserializer=proto_dot_itinerary__pb2.ItineraryList.FromString,
+                request_serializer=itinerary__pb2.Empty.SerializeToString,
+                response_deserializer=itinerary__pb2.ItineraryList.FromString,
                 )
         self.ReplicateItinerary = channel.unary_unary(
                 '/itinerary.ItineraryService/ReplicateItinerary',
-                request_serializer=proto_dot_itinerary__pb2.UpdateRequest.SerializeToString,
-                response_deserializer=proto_dot_itinerary__pb2.Empty.FromString,
+                request_serializer=itinerary__pb2.UpdateRequest.SerializeToString,
+                response_deserializer=itinerary__pb2.Empty.FromString,
                 )
         self.Heartbeat = channel.unary_unary(
                 '/itinerary.ItineraryService/Heartbeat',
-                request_serializer=proto_dot_itinerary__pb2.HeartbeatRequest.SerializeToString,
-                response_deserializer=proto_dot_itinerary__pb2.HeartbeatResponse.FromString,
+                request_serializer=itinerary__pb2.HeartbeatRequest.SerializeToString,
+                response_deserializer=itinerary__pb2.HeartbeatResponse.FromString,
                 )
 
 
@@ -81,28 +81,28 @@ def add_ItineraryServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetItinerary': grpc.unary_unary_rpc_method_handler(
                     servicer.GetItinerary,
-                    request_deserializer=proto_dot_itinerary__pb2.Empty.FromString,
-                    response_serializer=proto_dot_itinerary__pb2.ItineraryList.SerializeToString,
+                    request_deserializer=itinerary__pb2.Empty.FromString,
+                    response_serializer=itinerary__pb2.ItineraryList.SerializeToString,
             ),
             'UpdateItinerary': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateItinerary,
-                    request_deserializer=proto_dot_itinerary__pb2.UpdateRequest.FromString,
-                    response_serializer=proto_dot_itinerary__pb2.UpdateResponse.SerializeToString,
+                    request_deserializer=itinerary__pb2.UpdateRequest.FromString,
+                    response_serializer=itinerary__pb2.UpdateResponse.SerializeToString,
             ),
             'StreamItineraryChanges': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamItineraryChanges,
-                    request_deserializer=proto_dot_itinerary__pb2.Empty.FromString,
-                    response_serializer=proto_dot_itinerary__pb2.ItineraryList.SerializeToString,
+                    request_deserializer=itinerary__pb2.Empty.FromString,
+                    response_serializer=itinerary__pb2.ItineraryList.SerializeToString,
             ),
             'ReplicateItinerary': grpc.unary_unary_rpc_method_handler(
                     servicer.ReplicateItinerary,
-                    request_deserializer=proto_dot_itinerary__pb2.UpdateRequest.FromString,
-                    response_serializer=proto_dot_itinerary__pb2.Empty.SerializeToString,
+                    request_deserializer=itinerary__pb2.UpdateRequest.FromString,
+                    response_serializer=itinerary__pb2.Empty.SerializeToString,
             ),
             'Heartbeat': grpc.unary_unary_rpc_method_handler(
                     servicer.Heartbeat,
-                    request_deserializer=proto_dot_itinerary__pb2.HeartbeatRequest.FromString,
-                    response_serializer=proto_dot_itinerary__pb2.HeartbeatResponse.SerializeToString,
+                    request_deserializer=itinerary__pb2.HeartbeatRequest.FromString,
+                    response_serializer=itinerary__pb2.HeartbeatResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -126,8 +126,8 @@ class ItineraryService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/itinerary.ItineraryService/GetItinerary',
-            proto_dot_itinerary__pb2.Empty.SerializeToString,
-            proto_dot_itinerary__pb2.ItineraryList.FromString,
+            itinerary__pb2.Empty.SerializeToString,
+            itinerary__pb2.ItineraryList.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -143,8 +143,8 @@ class ItineraryService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/itinerary.ItineraryService/UpdateItinerary',
-            proto_dot_itinerary__pb2.UpdateRequest.SerializeToString,
-            proto_dot_itinerary__pb2.UpdateResponse.FromString,
+            itinerary__pb2.UpdateRequest.SerializeToString,
+            itinerary__pb2.UpdateResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -160,8 +160,8 @@ class ItineraryService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_stream(request, target, '/itinerary.ItineraryService/StreamItineraryChanges',
-            proto_dot_itinerary__pb2.Empty.SerializeToString,
-            proto_dot_itinerary__pb2.ItineraryList.FromString,
+            itinerary__pb2.Empty.SerializeToString,
+            itinerary__pb2.ItineraryList.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -177,8 +177,8 @@ class ItineraryService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/itinerary.ItineraryService/ReplicateItinerary',
-            proto_dot_itinerary__pb2.UpdateRequest.SerializeToString,
-            proto_dot_itinerary__pb2.Empty.FromString,
+            itinerary__pb2.UpdateRequest.SerializeToString,
+            itinerary__pb2.Empty.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -194,7 +194,7 @@ class ItineraryService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/itinerary.ItineraryService/Heartbeat',
-            proto_dot_itinerary__pb2.HeartbeatRequest.SerializeToString,
-            proto_dot_itinerary__pb2.HeartbeatResponse.FromString,
+            itinerary__pb2.HeartbeatRequest.SerializeToString,
+            itinerary__pb2.HeartbeatResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
