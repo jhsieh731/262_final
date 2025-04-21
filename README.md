@@ -29,18 +29,18 @@ This project implements a distributed shopping cart system using gRPC for backen
 
 ## How to Run
 
+Step 0: Make sure you have `db` and `logs` folders, as above. Make sure you have correctly installed libraries from `requirements.txt`:
+
+```[bash]
+pip install -r requirements.txt
+```
+
 Step 1: Run server replicas
 Launch all server replicas (9 total):
 
 ```[bash]
 python run_all_replicas.py
 ```
-
-This starts:
-
-- Shard 1: Ports 5000-5002
-- Shard 2: Ports 6000-6002
-- Itinerary servers: Ports 7100-7102
 
 Step 2: Run GUI client
 Launch the client interface:
