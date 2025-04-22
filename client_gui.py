@@ -8,8 +8,8 @@ import logging
 import json
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
-
 import os
+
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "proto")))
 from proto import user_cart_pb2, user_cart_pb2_grpc
@@ -17,7 +17,9 @@ from proto import inventory_pb2, inventory_pb2_grpc
 
 
 def load_config():
-    with open("config.json") as f:
+    # Allow overriding config path via environment for testing
+    config_path = os.environ.get("CLIENT_GUI_CONFIG_PATH", "config.json")
+    with open(config_path) as f:
         return json.load(f)
 
 config = load_config()
@@ -31,6 +33,7 @@ POLL_INTERVAL = 5  # seconds
 # Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+os.makedirs('logs', exist_ok=True)
 file_handler = logging.FileHandler('logs/client_app.log')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
