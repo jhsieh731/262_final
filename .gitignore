@@ -95,10 +95,6 @@ ENV/
 *.db
 *.sqlite3
 
-# gRPC/Protobuf generated files
-raft_pb2.py
-raft_pb2_grpc.py
-
 # Logs
 *.log
 
