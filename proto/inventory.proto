@@ -1,31 +1,31 @@
 syntax = "proto3";
 
-package itinerary;
+package inventory;
 
-service ItineraryService {
-  rpc GetItinerary(Empty) returns (ItineraryList);
-  rpc UpdateItinerary(UpdateRequest) returns (UpdateResponse);
-  rpc StreamItineraryChanges(Empty) returns (stream ItineraryList);
+service InventoryService {
+  rpc GetInventory(Empty) returns (InventoryList);
+  rpc UpdateInventory(UpdateRequest) returns (UpdateResponse);
+  rpc StreamInventoryChanges(Empty) returns (stream InventoryList);
 
   // Replication
-  rpc ReplicateItinerary(UpdateRequest) returns (Empty);
+  rpc ReplicateInventory(UpdateRequest) returns (Empty);
 
   // Heartbeats and leader detection
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
 }
 
-message ItineraryItem {
+message InventoryItem {
   int32 id = 1;
   string name = 2;
   int32 number = 3;
 }
 
-message ItineraryList {
-  repeated ItineraryItem items = 1;
+message InventoryList {
+  repeated InventoryItem items = 1;
 }
 
 message UpdateRequest {
-  int32 itinerary_id = 1;
+  int32 inventory_id = 1;
   int32 quantity_change = 2;
 }
 

@@ -38,13 +38,13 @@ def main():
     
     shard1 = run_replicas("s1r", config["shard1"], "shard_server.py")
     shard2 = run_replicas("s2r", config["shard2"], "shard_server.py")
-    itinerary = run_replicas("it", config["itinerary"], "itinerary_server.py")
+    inventory = run_replicas("it", config["inventory"], "inventory_server.py")
 
-    all_procs = {**shard1, **shard2, **itinerary}
+    all_procs = {**shard1, **shard2, **inventory}
 
     print("\nInteractive commands:")
     print("- kill s1r0       (kill shard 1 replica 0)")
-    print("- kill it2        (kill itinerary replica 2)")
+    print("- kill it2        (kill inventory replica 2)")
     print("- list            (list live replicas)")
     print("- exit            (stop all)\n")
 

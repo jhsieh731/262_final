@@ -13,11 +13,11 @@
     {"host": "localhost", "port": 6003, "db": "db/shard2_replica3.db"},
     {"host": "localhost", "port": 6004, "db": "db/shard2_replica4.db"}
   ],
-  "itinerary": [
-    {"host": "localhost", "port": 7100, "db": "db/itinerary_replica0.db"},
-    {"host": "localhost", "port": 7101, "db": "db/itinerary_replica1.db"},
-    {"host": "localhost", "port": 7102, "db": "db/itinerary_replica2.db"},
-    {"host": "localhost", "port": 7103, "db": "db/itinerary_replica3.db"},
-    {"host": "localhost", "port": 7104, "db": "db/itinerary_replica4.db"}
+  "inventory": [
+    {"host": "localhost", "port": 7100, "db": "db/inventory_replica0.db"},
+    {"host": "localhost", "port": 7101, "db": "db/inventory_replica1.db"},
+    {"host": "localhost", "port": 7102, "db": "db/inventory_replica2.db"},
+    {"host": "localhost", "port": 7103, "db": "db/inventory_replica3.db"},
+    {"host": "localhost", "port": 7104, "db": "db/inventory_replica4.db"}
   ]
 }

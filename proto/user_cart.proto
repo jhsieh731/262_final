@@ -20,6 +20,7 @@ service UserCartService {
 
 message LoginRequest {
   string username = 1;
+  string password = 5;
 }
 
 message LoginResponse {
@@ -29,6 +30,7 @@ message LoginResponse {
 
 message CreateAccountRequest {
   string username = 1;
+  string password = 5;
 }
 
 message CreateAccountResponse {
@@ -42,12 +44,12 @@ message UserRequest {
 
 message UpdateCartRequest {
   int32 user_id = 1;
-  int32 itinerary_id = 2;
+  int32 inventory_id = 2;
   int32 quantity = 3;
 }
 
 message CartItem {
-  int32 itinerary_id = 1;
+  int32 inventory_id = 1;
   int32 quantity = 2;
 }
 
@@ -61,7 +63,7 @@ message CheckoutResponse {
 
 message ReplicateCartRequest {
   int32 user_id = 1;
-  int32 itinerary_id = 2;
+  int32 inventory_id = 2;
   int32 quantity = 3;
   bool is_deleted = 4;
 }

@@ -44,7 +44,7 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         # logger
          # Logging
         os.makedirs("logs", exist_ok=True)
-        self.logger = logging.getLogger(f"itinerary_server_{host}_{port}")
+        self.logger = logging.getLogger(f"inventory_server_{host}_{port}")
         self.logger.setLevel(logging.DEBUG)
 
         handler = logging.StreamHandler(sys.stdout)
@@ -61,16 +61,17 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE
+                username TEXT UNIQUE,
+                password TEXT NOT NULL
             );
         """)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS cart (
                 user_id INTEGER,
-                itinerary_id INTEGER,
+                inventory_id INTEGER,
                 quantity INTEGER,
                 is_deleted BOOLEAN DEFAULT 0,
-                PRIMARY KEY(user_id, itinerary_id)
+                PRIMARY KEY(user_id, inventory_id)
             );
         """)
         self.db_conn.commit()
@@ -89,45 +90,46 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         action = cmd.get("action")
         if action == "create_account":
             username = cmd.get("username")
+            password = cmd.get("password")
             cur = self.db_conn.cursor()
             try:
-                cur.execute("INSERT INTO users (username) VALUES (?)", (username,))
+                cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password,))
                 self.db_conn.commit()
                 self.logger.info(f"Applied create_account: {username}")
             except sqlite3.IntegrityError:
                 self.logger.info(f"Account already exists: {username}")
         elif action == "add_to_cart":
             user_id = cmd.get("user_id")
-            itinerary_id = cmd.get("itinerary_id")
+            inventory_id = cmd.get("inventory_id")
             quantity = cmd.get("quantity")
             cur = self.db_conn.cursor()
             cur.execute("""
                 SELECT quantity, is_deleted FROM cart 
-                WHERE user_id = ? AND itinerary_id = ?
-            """, (user_id, itinerary_id))
+                WHERE user_id = ? AND inventory_id = ?
+            """, (user_id, inventory_id))
             row = cur.fetchone()
             if row:
                 new_quantity = row["quantity"] + quantity if not row["is_deleted"] else quantity
                 cur.execute("""
                     UPDATE cart 
                     SET quantity = ?, is_deleted = 0 
-                    WHERE user_id = ? AND itinerary_id = ?
-                """, (new_quantity, user_id, itinerary_id))
+                    WHERE user_id = ? AND inventory_id = ?
+                """, (new_quantity, user_id, inventory_id))
             else:
                 cur.execute("""
-                    INSERT INTO cart (user_id, itinerary_id, quantity, is_deleted)
+                    INSERT INTO cart (user_id, inventory_id, quantity, is_deleted)
                     VALUES (?, ?, ?, 0)
-                """, (user_id, itinerary_id, quantity))
+                """, (user_id, inventory_id, quantity))
             self.db_conn.commit()
-            self.logger.info(f"Applied add_to_cart for user {user_id}, itinerary {itinerary_id}")
+            self.logger.info(f"Applied add_to_cart for user {user_id}, inventory {inventory_id}")
         elif action == "remove_from_cart":
             user_id = cmd.get("user_id")
-            itinerary_id = cmd.get("itinerary_id")
+            inventory_id = cmd.get("inventory_id")
             cur = self.db_conn.cursor()
-            cur.execute("UPDATE cart SET is_deleted = 1 WHERE user_id = ? AND itinerary_id = ?",
-                        (user_id, itinerary_id))
+            cur.execute("UPDATE cart SET is_deleted = 1 WHERE user_id = ? AND inventory_id = ?",
+                        (user_id, inventory_id))
             self.db_conn.commit()
-            self.logger.info(f"Applied remove_from_cart for user {user_id}, itinerary {itinerary_id}")
+            self.logger.info(f"Applied remove_from_cart for user {user_id}, inventory {inventory_id}")
         elif action == "checkout":
             user_id = cmd.get("user_id")
             cur = self.db_conn.cursor()
@@ -143,36 +145,61 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
 
     def Login(self, request, context):
         cur = self.db_conn.cursor()
-        cur.execute("SELECT user_id FROM users WHERE username=?", (request.username,))
+        cur.execute("SELECT user_id FROM users WHERE username=? AND password=?", (request.username, request.password))
         row = cur.fetchone()
         if row:
             return user_cart_pb2.LoginResponse(success=True, user_id=row["user_id"])
         return user_cart_pb2.LoginResponse(success=False)
-
+    
     def CreateAccount(self, request, context):
         if not hasattr(self, 'raft_node'):
             context.set_code(grpc.StatusCode.UNAVAILABLE)
             context.set_details("Raft is still initializing")
             return user_cart_pb2.CreateAccountResponse(success=False)
+        
         if self.raft_node.state != "Leader":
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
             context.set_details('Not leader')
-            return user_cart_pb2.CreateAccountResponse()
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        
+        # First check if the username already exists
+        cur = self.db_conn.cursor()
+        cur.execute("SELECT user_id FROM users WHERE username=?", (request.username,))
+        if cur.fetchone():
+            self.logger.warning(f"Username already exists: {request.username}")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        
         # Construct command as JSON
         command = json.dumps({
             "action": "create_account",
-            "username": request.username
+            "username": request.username,
+            "password": request.password
         })
-        if self.raft_node.submit_command(command):
-            # You could later query the local DB to get the new account's id.
+        
+        # Submit the command but don't query immediately
+        success = self.raft_node.submit_command(command)
+        if not success:
+            self.logger.error(f"Failed to submit create_account command for {request.username}")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+        
+        # Wait for the command to be applied (with timeout)
+        max_attempts = 10
+        for _ in range(max_attempts):
+            time.sleep(0.3)  # Short delay to allow command to propagate
+            
+            # Query to check if account was created
             cur = self.db_conn.cursor()
             cur.execute("SELECT user_id FROM users WHERE username=?", (request.username,))
             row = cur.fetchone()
+            
             if row:
+                self.logger.info(f"Created account for {request.username} with ID {row['user_id']}")
                 return user_cart_pb2.CreateAccountResponse(success=True, user_id=row["user_id"])
+        
+        # If we get here, the command might still be processing but we've timed out
+        self.logger.warning(f"Timed out waiting for account creation for {request.username}")
         return user_cart_pb2.CreateAccountResponse(success=False)
 
-    
     def AddToCart(self, request, context):
         if not hasattr(self, 'raft_node'):
             context.set_code(grpc.StatusCode.UNAVAILABLE)
@@ -186,7 +213,7 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         command = json.dumps({
             "action": "add_to_cart",
             "user_id": request.user_id,
-            "itinerary_id": request.itinerary_id,
+            "inventory_id": request.inventory_id,
             "quantity": request.quantity
         })
 
@@ -209,7 +236,7 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
         command = json.dumps({
             "action": "remove_from_cart",
             "user_id": request.user_id,
-            "itinerary_id": request.itinerary_id
+            "inventory_id": request.inventory_id
         })
 
         success = self.raft_node.submit_command(command)
@@ -221,9 +248,9 @@ class ShardServer(user_cart_pb2_grpc.UserCartServiceServicer):
 
     def GetCart(self, request, context):
         cur = self.db_conn.cursor()
-        cur.execute("SELECT itinerary_id, quantity FROM cart WHERE user_id = ? AND is_deleted = 0",
+        cur.execute("SELECT inventory_id, quantity FROM cart WHERE user_id = ? AND is_deleted = 0",
                     (request.user_id,))
-        items = [user_cart_pb2.CartItem(itinerary_id=row["itinerary_id"], quantity=row["quantity"])
+        items = [user_cart_pb2.CartItem(inventory_id=row["inventory_id"], quantity=row["quantity"])
                  for row in cur.fetchall()]
         return user_cart_pb2.CartResponse(items=items)
 
@@ -305,8 +332,6 @@ def serve(host, port, peers, db_path):
     shard.logger.info(f"RaftNode attached to RaftService")
 
     server.wait_for_termination()
-
-
 
 
 if __name__ == "__main__":

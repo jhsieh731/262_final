@@ -7,12 +7,13 @@ import random
 import logging 
 import json
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
 
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "proto")))
 from proto import user_cart_pb2, user_cart_pb2_grpc
-from proto import itinerary_pb2, itinerary_pb2_grpc
+from proto import inventory_pb2, inventory_pb2_grpc
 
 
 def load_config():
@@ -23,7 +24,7 @@ config = load_config()
 
 SHARD_1_REPLICAS = [(r["host"], r["port"]) for r in config["shard1"]]
 SHARD_2_REPLICAS = [(r["host"], r["port"]) for r in config["shard2"]]
-ITINERARY_REPLICAS = [(r["host"], r["port"]) for r in config["itinerary"]]
+INVENTORY_REPLICAS = [(r["host"], r["port"]) for r in config["inventory"]]
 
 POLL_INTERVAL = 5  # seconds
 
@@ -41,7 +42,7 @@ def create_stub_list(replicas, stub_class):
 class ClientApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Travel Booking System")
+        self.root.title("Shopping Cart")
         self.root.geometry("600x500")
         
         # Configure style
@@ -59,13 +60,13 @@ class ClientApp:
         self.current_username = ""
         self.current_shard = None
         self.cart = {}
-        self.itinerary_items = []
-        self.selected_itinerary_index = None
+        self.inventory_items = []
+        self.selected_inventory_index = None
 
         # Leader tracking
         self.shard1_leader = None
         self.shard2_leader = None
-        self.itinerary_leader = None
+        self.inventory_leader = None
 
         # Thread pool for async operations
         self.thread_pool = ThreadPoolExecutor(max_workers=5)
@@ -73,7 +74,7 @@ class ClientApp:
         # Create stubs for gRPC services
         self.shard1_stubs = create_stub_list(SHARD_1_REPLICAS, user_cart_pb2_grpc.UserCartServiceStub)
         self.shard2_stubs = create_stub_list(SHARD_2_REPLICAS, user_cart_pb2_grpc.UserCartServiceStub)
-        self.itinerary_stubs = create_stub_list(ITINERARY_REPLICAS, itinerary_pb2_grpc.ItineraryServiceStub)
+        self.inventory_stubs = create_stub_list(INVENTORY_REPLICAS, inventory_pb2_grpc.InventoryServiceStub)
 
         # Main container
         self.main_container = ttk.Frame(self.root, style='TFrame')
@@ -117,7 +118,7 @@ class ClientApp:
                             response = stub.Heartbeat(user_cart_pb2.HeartbeatRequest(host=host, port=port), timeout=1.0)
                             if response.is_leader:
                                 leader = (host, port)
-                                logger.info(f"Found leader for {service_name}: {leader}")
+                                # logger.info(f"Found leader for {service_name}: {leader}")
                                 self.root.after(0, lambda: self.status_var.set(f"Connected to {service_name} leader"))
                                 break
                         except grpc.RpcError as e:
@@ -145,7 +146,7 @@ class ClientApp:
 
         threading.Thread(target=lambda: monitor(self.shard1_stubs, self.set_shard1_leader, "Shard 1"), daemon=True).start()
         threading.Thread(target=lambda: monitor(self.shard2_stubs, self.set_shard2_leader, "Shard 2"), daemon=True).start()
-        threading.Thread(target=lambda: monitor(self.itinerary_stubs, self.set_itinerary_leader, "Itinerary"), daemon=True).start()
+        threading.Thread(target=lambda: monitor(self.inventory_stubs, self.set_inventory_leader, "Inventory"), daemon=True).start()
     
     def set_shard1_leader(self, leader):
         prev = self.shard1_leader
@@ -159,11 +160,11 @@ class ClientApp:
             logger.info(f"Shard 2 leader changed from {prev} to {leader}")
         self.shard2_leader = leader
 
-    def set_itinerary_leader(self, leader):
-        prev = self.itinerary_leader
+    def set_inventory_leader(self, leader):
+        prev = self.inventory_leader
         if prev != leader:
-            logger.info(f"Itinerary leader changed from {prev} to {leader}")
-        self.itinerary_leader = leader
+            logger.info(f"Inventory leader changed from {prev} to {leader}")
+        self.inventory_leader = leader
 
     def create_login_frame(self):
         """Create the login view with improved styling"""
@@ -186,33 +187,47 @@ class ClientApp:
         self.username_entry = ttk.Entry(login_tab, width=30)
         self.username_entry.grid(row=0, column=1, sticky=tk.W, pady=10)
         
+        # Add password field
+        ttk.Label(login_tab, text="Password:").grid(row=1, column=0, sticky=tk.W, pady=10)
+        self.password_entry = ttk.Entry(login_tab, width=30, show="•")
+        self.password_entry.grid(row=1, column=1, sticky=tk.W, pady=10)
+        
         # Login buttons
         login_button = ttk.Button(login_tab, text="Login", 
                                  command=self.login, 
                                  style='Action.TButton')
-        login_button.grid(row=1, column=1, sticky=tk.E, pady=20)
+        login_button.grid(row=2, column=1, sticky=tk.E, pady=20)
         
         # Login result message
         self.login_result_var = tk.StringVar()
         self.login_result = ttk.Label(login_tab, textvariable=self.login_result_var)
-        self.login_result.grid(row=2, column=0, columnspan=2, pady=10)
-        
+        self.login_result.grid(row=3, column=0, columnspan=2, pady=10)
+
         # Create account tab contents
         ttk.Label(register_tab, text="Username:").grid(row=0, column=0, sticky=tk.W, pady=10)
         self.register_username = ttk.Entry(register_tab, width=30)
         self.register_username.grid(row=0, column=1, sticky=tk.W, pady=10)
         
+        # Add password field
+        ttk.Label(register_tab, text="Password:").grid(row=1, column=0, sticky=tk.W, pady=10)
+        self.register_password = ttk.Entry(register_tab, width=30, show="•")
+        self.register_password.grid(row=1, column=1, sticky=tk.W, pady=10)
+        
+        # Add confirm password field
+        ttk.Label(register_tab, text="Confirm Password:").grid(row=2, column=0, sticky=tk.W, pady=10)
+        self.register_confirm_password = ttk.Entry(register_tab, width=30, show="•")
+        self.register_confirm_password.grid(row=2, column=1, sticky=tk.W, pady=10)
+        
         # Register button
         register_button = ttk.Button(register_tab, text="Create Account", 
                                    command=self.create_account, 
                                    style='Action.TButton')
-        register_button.grid(row=1, column=1, sticky=tk.E, pady=20)
+        register_button.grid(row=3, column=1, sticky=tk.E, pady=20)
         
         # Register result message
         self.register_result_var = tk.StringVar()
         self.register_result = ttk.Label(register_tab, textvariable=self.register_result_var)
-        self.register_result.grid(row=2, column=0, columnspan=2, pady=10)
-        
+        self.register_result.grid(row=4, column=0, columnspan=2, pady=10)
         return frame
         
     def create_main_frame(self):
@@ -229,26 +244,26 @@ class ClientApp:
         
         ttk.Label(left_panel, text="Available Itineraries", font=('Arial', 14, 'bold')).pack(anchor=tk.W, pady=(0, 10))
         
-        # Itinerary list with scrollbar
+        # Inventory list with scrollbar
         list_frame = ttk.Frame(left_panel)
         list_frame.pack(fill=tk.BOTH, expand=True)
         
         scrollbar = ttk.Scrollbar(list_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        self.itinerary_listbox = tk.Listbox(list_frame, font=('Arial', 12), 
+        self.inventory_listbox = tk.Listbox(list_frame, font=('Arial', 12), 
                                           yscrollcommand=scrollbar.set,
                                           selectbackground='#a6d4fa',
                                           height=10)
-        self.itinerary_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.itinerary_listbox.yview)
+        self.inventory_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=self.inventory_listbox.yview)
         
         # Bind selection event
-        self.itinerary_listbox.bind("<<ListboxSelect>>", self.on_item_select)
+        self.inventory_listbox.bind("<<ListboxSelect>>", self.on_item_select)
         
         # Last updated label
-        self.itinerary_update_label = ttk.Label(left_panel, text="", style='Status.TLabel')
-        self.itinerary_update_label.pack(anchor=tk.W, pady=(5, 0))
+        self.inventory_update_label = ttk.Label(left_panel, text="", style='Status.TLabel')
+        self.inventory_update_label.pack(anchor=tk.W, pady=(5, 0))
         
         # Right panel - Cart
         right_panel = ttk.Frame(frame)
@@ -321,11 +336,11 @@ class ClientApp:
         return frame
 
     def on_item_select(self, event):
-        if not self.itinerary_listbox.curselection():
-            self.selected_itinerary_index = None
+        if not self.inventory_listbox.curselection():
+            self.selected_inventory_index = None
         else:
-            self.selected_itinerary_index = self.itinerary_listbox.curselection()[0]
-            logger.info(f"Selected itinerary index: {self.selected_itinerary_index}")
+            self.selected_inventory_index = self.inventory_listbox.curselection()[0]
+            logger.info(f"Selected inventory index: {self.selected_inventory_index}")
 
     def switch_to_main(self):
         """Switch to main view and update welcome message"""
@@ -337,8 +352,8 @@ class ClientApp:
         # Show main frame
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        # Start polling for itinerary updates
-        threading.Thread(target=self.poll_itinerary_loop, daemon=True).start()
+        # Start polling for inventory updates
+        threading.Thread(target=self.poll_inventory_loop, daemon=True).start()
     
     def logout(self):
         """Logout and return to login screen"""
@@ -351,8 +366,11 @@ class ClientApp:
         # Reset login fields
         self.username_entry.delete(0, tk.END)
         self.login_result_var.set("")
+        self.password_entry.delete(0, tk.END)
         self.register_result_var.set("")
         self.register_username.delete(0, tk.END)
+        self.register_password.delete(0, tk.END)
+        self.register_confirm_password.delete(0, tk.END)
         
         # Show login frame
         self.login_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
@@ -399,9 +417,9 @@ class ClientApp:
                 else:
                     logger.error(f"{operation_name} error: {e.code()} - {e.details()}")
                     self.root.after(0, lambda: messagebox.showerror("Error", f"{operation_name} failed: {e.details()}"))
-            except Exception as e:
-                logger.error(f"{operation_name} unexpected error: {str(e)}")
-                self.root.after(0, lambda: messagebox.showerror("Error", f"Unexpected error: {str(e)}"))
+            except Exception as e2:
+                logger.error(f"{operation_name} unexpected error: {str(e2)}")
+                self.root.after(0, lambda: messagebox.showerror("Error", f"Unexpected error: {str(e2)}"))
             finally:
                 # Re-enable button if one was disabled
                 if disabled_button:
@@ -410,12 +428,21 @@ class ClientApp:
         # Submit to thread pool instead of creating new thread
         self.thread_pool.submit(run_in_thread)
 
+    def hash_password(self, password):
+        """Hash a password using SHA-256"""
+        return hashlib.sha256(password.encode()).hexdigest()
+
+
     def login(self):
         """Login using background thread"""
         username = self.username_entry.get().strip()
-        if not username:
-            messagebox.showerror("Error", "Username cannot be empty")
+        password = self.password_entry.get()
+
+        if not username or not password:
+            messagebox.showerror("Error", "Username and password cannot be empty")
             return
+        
+        hashed_password = self.hash_password(password)
 
         self.login_result_var.set("Logging in...")
         
@@ -441,7 +468,7 @@ class ClientApp:
                     login_to_shard2()
 
             def make_rpc():
-                return stub.Login(user_cart_pb2.LoginRequest(username=username))
+                return stub.Login(user_cart_pb2.LoginRequest(username=username, password=hashed_password))
 
             self.threaded_rpc("Login (shard 1)", make_rpc, on_success, login_to_shard2)
 
@@ -467,7 +494,7 @@ class ClientApp:
                     messagebox.showerror("Error", "User not found on either shard")
 
             def make_rpc():
-                return stub.Login(user_cart_pb2.LoginRequest(username=username))
+                return stub.Login(user_cart_pb2.LoginRequest(username=username, password=hashed_password))
 
             self.threaded_rpc("Login (shard 2)", make_rpc, on_success)
 
@@ -477,12 +504,22 @@ class ClientApp:
     def create_account(self):
         """Create account using background thread"""
         username = self.register_username.get().strip()
-        if not username:
-            messagebox.showerror("Error", "Username cannot be empty")
+        password = self.register_password.get()
+        confirm_password = self.register_confirm_password.get()
+
+        if not username or not password or not confirm_password:
+            messagebox.showerror("Error", "Fields cannot be empty")
             return
+        
+        if password != confirm_password:
+            self.register_result_var.set("Passwords do not match")
+            messagebox.showerror("Error", "Passwords do not match")
+            return
+            
+        hashed_password = self.hash_password(password)
 
         self.register_result_var.set("Creating account...")
-            
+
         # Choose a random shard
         target_shard = 1 if random.choice([True, False]) else 2
         stub = self.get_shard1_stub() if target_shard == 1 else self.get_shard2_stub()
@@ -507,7 +544,7 @@ class ClientApp:
                 messagebox.showerror("Error", "Username already exists")
 
         def make_rpc():
-            return stub.CreateAccount(user_cart_pb2.CreateAccountRequest(username=username))
+            return stub.CreateAccount(user_cart_pb2.CreateAccountRequest(username=username, password=hashed_password))
 
         # Retry with the same function if leader changes
         self.threaded_rpc("Create Account", make_rpc, on_success, self.create_account)
@@ -520,7 +557,7 @@ class ClientApp:
             return
 
         def on_success(response):
-            self.cart = {item.itinerary_id: item.quantity for item in response.items}
+            self.cart = {item.inventory_id: item.quantity for item in response.items}
             logger.info(f"Loaded cart for user {self.user_id}: {self.cart}")
             self.refresh_cart()
 
@@ -531,12 +568,12 @@ class ClientApp:
 
     def add_to_cart(self):
         """Add to cart using background thread"""
-        idx = self.selected_itinerary_index
+        idx = self.selected_inventory_index
         if idx is None:
-            messagebox.showinfo("Selection Required", "Please select an itinerary first")
+            messagebox.showinfo("Selection Required", "Please select an inventory first")
             return
             
-        item = self.itinerary_items[idx]
+        item = self.inventory_items[idx]
         try:
             qty = int(self.quantity_entry.get())
             if qty <= 0:
@@ -560,19 +597,19 @@ class ClientApp:
             
         def make_rpc():
             return stub.AddToCart(user_cart_pb2.UpdateCartRequest(
-                user_id=self.user_id, itinerary_id=item.id, quantity=qty))
+                user_id=self.user_id, inventory_id=item.id, quantity=qty))
 
         # Pass the button text to disable/re-enable it
         self.threaded_rpc("Add to Cart", make_rpc, on_success, self.add_to_cart, "Add to Cart")
         
     def remove_from_cart(self):
         """Remove from cart using background thread"""
-        idx = self.selected_itinerary_index
+        idx = self.selected_inventory_index
         if idx is None:
-            messagebox.showinfo("Selection Required", "Please select an itinerary to remove")
+            messagebox.showinfo("Selection Required", "Please select an inventory to remove")
             return
             
-        item = self.itinerary_items[idx]
+        item = self.inventory_items[idx]
         
         if item.id not in self.cart:
             messagebox.showinfo("Not in Cart", "This item is not in your cart")
@@ -592,7 +629,7 @@ class ClientApp:
             
         def make_rpc():
             return stub.RemoveFromCart(user_cart_pb2.UpdateCartRequest(
-                user_id=self.user_id, itinerary_id=item.id, quantity=0))
+                user_id=self.user_id, inventory_id=item.id, quantity=0))
 
         self.threaded_rpc("Remove from Cart", make_rpc, on_success, self.remove_from_cart, "Remove from Cart")
 
@@ -603,14 +640,14 @@ class ClientApp:
             return
                 
         cart_stub = self.get_user_cart_stub()
-        itin_stub = self.get_itinerary_stub()
+        itin_stub = self.get_inventory_stub()
         
         if not cart_stub or not itin_stub:
             messagebox.showerror("Error", "Leader unavailable")
             return
 
         # Show confirmation dialog
-        items_text = "\n".join([f"- {next((i.name for i in self.itinerary_items if i.id == id), f'Item {id}')}: {qty}" 
+        items_text = "\n".join([f"- {next((i.name for i in self.inventory_items if i.id == id), f'Item {id}')}: {qty}" 
                               for id, qty in self.cart.items()])
         confirm = messagebox.askyesno("Confirm Checkout", 
                                      f"Are you sure you want to checkout with these items?\n\n{items_text}")
@@ -630,13 +667,13 @@ class ClientApp:
             try:
                 self.status_var.set("Processing checkout...")
                 
-                # First update itinerary quantities
-                for itinerary_id, qty in list(self.cart.items()):
-                    itin_stub.UpdateItinerary(itinerary_pb2.UpdateRequest(
-                        itinerary_id=itinerary_id, quantity_change=qty))
+                # First update inventory quantities
+                for inventory_id, qty in list(self.cart.items()):
+                    itin_stub.UpdateInventory(inventory_pb2.UpdateRequest(
+                        inventory_id=inventory_id, quantity_change=-qty))
 
-                # Then get updated itinerary
-                response = itin_stub.GetItinerary(itinerary_pb2.Empty())
+                # Then get updated inventory
+                response = itin_stub.GetInventory(inventory_pb2.Empty())
                 updated_items = list(response.items)
                 
                 # Finally checkout the cart
@@ -650,7 +687,7 @@ class ClientApp:
                     logger.info("Checkout: Not leader error, refreshing leaders")
                     self.shard1_leader = None
                     self.shard2_leader = None
-                    self.itinerary_leader = None
+                    self.inventory_leader = None
                     self.root.after(500, self.checkout)
                 else:
                     logger.error(f"Checkout error: {e.code()} - {e.details()}")
@@ -666,75 +703,75 @@ class ClientApp:
         
     def _update_after_checkout(self, updated_items):
         """Update UI after successful checkout"""
-        self.itinerary_items = updated_items
-        self.refresh_itinerary()
+        self.inventory_items = updated_items
+        self.refresh_inventory()
         self.cart.clear()
         self.refresh_cart()
         self.status_var.set("Checkout completed")
         messagebox.showinfo("Success", "Your order has been placed successfully!")
 
-    def poll_itinerary_loop(self):
-        """Poll itinerary service in background thread"""
+    def poll_inventory_loop(self):
+        """Poll inventory service in background thread"""
         while True:
             try:
                 if self.user_id is None:  # Stop polling if logged out
                     return
                     
-                stub = self.get_itinerary_stub()
+                stub = self.get_inventory_stub()
                 if stub:
                     try:
-                        response = stub.GetItinerary(itinerary_pb2.Empty())
+                        response = stub.GetInventory(inventory_pb2.Empty())
                         items = list(response.items)
                         
                         # Update UI on main thread
-                        self.root.after(0, lambda i=items: self._update_itinerary_items(i))
+                        self.root.after(0, lambda i=items: self._update_inventory_items(i))
                         
                     except grpc.RpcError as e:
                         if e.code() == grpc.StatusCode.FAILED_PRECONDITION and "Not leader" in e.details():
-                            self.itinerary_leader = None
-                            logger.info("Itinerary polling: Not leader error, refreshing leader")
+                            self.inventory_leader = None
+                            logger.info("Inventory polling: Not leader error, refreshing leader")
                         else:
-                            logger.debug(f"Error polling itinerary: {e.code()}")
+                            logger.debug(f"Error polling inventory: {e.code()}")
             except Exception as e:
-                logger.error(f"Unexpected error in itinerary polling: {str(e)}")
+                logger.error(f"Unexpected error in inventory polling: {str(e)}")
                 
             time.sleep(POLL_INTERVAL)
 
-    def _update_itinerary_items(self, items):
-        """Update itinerary items and refresh display"""
-        self.itinerary_items = items
-        logger.info(f"Polled {len(items)} itinerary items")
-        self.refresh_itinerary()
+    def _update_inventory_items(self, items):
+        """Update inventory items and refresh display"""
+        self.inventory_items = items
+        logger.info(f"Polled {len(items)} inventory items")
+        self.refresh_inventory()
 
-    def refresh_itinerary(self):
-        """Update the itinerary listbox with current items"""
-        if not hasattr(self, "itinerary_listbox"):
+    def refresh_inventory(self):
+        """Update the inventory listbox with current items"""
+        if not hasattr(self, "inventory_listbox"):
             return
 
         # Save current selection
         try:
-            current_selection = self.itinerary_listbox.curselection()[0]
-            current_id = self.itinerary_items[current_selection].id
+            current_selection = self.inventory_listbox.curselection()[0]
+            current_id = self.inventory_items[current_selection].id
         except (IndexError, AttributeError):
             current_id = None
 
         # Refresh the list
-        self.itinerary_listbox.delete(0, tk.END)
-        for item in self.itinerary_items:
-            self.itinerary_listbox.insert(tk.END, f"{item.name}: {item.number} available")
+        self.inventory_listbox.delete(0, tk.END)
+        for item in self.inventory_items:
+            self.inventory_listbox.insert(tk.END, f"{item.name}: {item.number} available")
 
         # Try to restore the same item if it's still there
         if current_id is not None:
-            for i, item in enumerate(self.itinerary_items):
+            for i, item in enumerate(self.inventory_items):
                 if item.id == current_id:
-                    self.itinerary_listbox.selection_set(i)
-                    self.itinerary_listbox.activate(i)
-                    self.itinerary_listbox.see(i)
+                    self.inventory_listbox.selection_set(i)
+                    self.inventory_listbox.activate(i)
+                    self.inventory_listbox.see(i)
                     break
 
         # Update timestamp
         now = time.strftime("%H:%M:%S")
-        self.itinerary_update_label.config(text=f"Last updated: {now}")
+        self.inventory_update_label.config(text=f"Last updated: {now}")
 
     def refresh_cart(self):
         """Update the cart display with current items"""
@@ -748,8 +785,8 @@ class ClientApp:
         total_items = 0
         for item_id, qty in self.cart.items():
             item_name = "Unknown Item"
-            # Find item name in itinerary items
-            for item in self.itinerary_items:
+            # Find item name in inventory items
+            for item in self.inventory_items:
                 if item.id == item_id:
                     item_name = item.name
                     break
@@ -779,10 +816,10 @@ class ClientApp:
             return next((stub for (h, p), stub in self.shard2_stubs if (h, p) == self.shard2_leader), None)
         return None
 
-    def get_itinerary_stub(self):
-        """Get a stub for the current itinerary leader"""
-        if self.itinerary_leader:
-            return next((stub for (h, p), stub in self.itinerary_stubs if (h, p) == self.itinerary_leader), None)
+    def get_inventory_stub(self):
+        """Get a stub for the current inventory leader"""
+        if self.inventory_leader:
+            return next((stub for (h, p), stub in self.inventory_stubs if (h, p) == self.inventory_leader), None)
         return None
 
 if __name__ == "__main__":
