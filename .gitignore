@@ -1,0 +1,7 @@
+# meta
+.venv/
+*__pycache__*
+
+# logs and dbs
+*.log
+*.db

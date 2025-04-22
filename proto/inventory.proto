@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package inventory;
+
+service InventoryService {
+  rpc GetInventory(Empty) returns (InventoryList);
+  rpc UpdateInventory(UpdateRequest) returns (UpdateResponse);
+  rpc StreamInventoryChanges(Empty) returns (stream InventoryList);
+
+  // Replication
+  rpc ReplicateInventory(UpdateRequest) returns (Empty);
+
+  // Heartbeats and leader detection
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message InventoryItem {
+  int32 id = 1;
+  string name = 2;
+  int32 number = 3;
+}
+
+message InventoryList {
+  repeated InventoryItem items = 1;
+}
+
+message UpdateRequest {
+  int32 inventory_id = 1;
+  int32 quantity_change = 2;
+}
+
+message UpdateResponse {
+  bool success = 1;
+}
+
+message HeartbeatRequest {
+  string host = 1;
+  int32 port = 2;
+}
+
+message HeartbeatResponse {
+  bool is_leader = 1;
+}
+
+message Empty {}
