@@ -85,7 +85,7 @@ class ClientApp:
         self.header_frame.pack(fill=tk.X, pady=15, padx=20)
         
         self.header_label = ttk.Label(self.header_frame, 
-                                     text="Travel Booking System", 
+                                     text="Shopping Cart", 
                                      style='Header.TLabel')
         self.header_label.pack(side=tk.LEFT)
         
@@ -238,11 +238,11 @@ class ClientApp:
         self.welcome_label = ttk.Label(frame, text="", style='Header.TLabel')
         self.welcome_label.pack(pady=(0, 20))
         
-        # Left panel - Itineraries
+        # Left panel - inventory
         left_panel = ttk.Frame(frame)
         left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10)
         
-        ttk.Label(left_panel, text="Available Itineraries", font=('Arial', 14, 'bold')).pack(anchor=tk.W, pady=(0, 10))
+        ttk.Label(left_panel, text="Available inventory", font=('Arial', 14, 'bold')).pack(anchor=tk.W, pady=(0, 10))
         
         # Inventory list with scrollbar
         list_frame = ttk.Frame(left_panel)

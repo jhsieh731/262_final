@@ -61,11 +61,9 @@ class InventoryServer(inventory_pb2_grpc.InventoryServiceServicer):
         cur.execute("SELECT COUNT(*) FROM inventory")
         if cur.fetchone()[0] == 0:
             sample_data = [
-                ("Flight to Paris", 10),
-                ("Hotel in Rome", 20),
-                ("Car Rental in London", 15),
-                ("Beach Resort in Bali", 5),
-                ("Mountain Retreat in Switzerland", 8)
+                ("Apple", 100),
+                ("Banana", 100),
+                ("Carrot", 100),
             ]
             for name, number in sample_data:
                 cur.execute("INSERT INTO inventory (name, number) VALUES (?, ?)", (name, number))

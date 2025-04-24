@@ -3,4 +3,4 @@
 #   -Iproto \
 #   --python_out=proto \
 #   --grpc_python_out=proto \
-#   proto/raft.proto proto/user_cart.proto proto/inventory.proto
+#   proto/raft.proto proto/user_cart.proto proto/inventory.proto proto/load_balancer.proto
