@@ -11,7 +11,6 @@ def run_replicas(kind, replicas, script_name):
     processes = {}
     for i, replica in enumerate(replicas):
         host, port, db_file = replica["host"], replica["port"], replica["db"]
-        # TODO: change peers list
 
         self_peers = ",".join(
             f"{peer['host']}:{peer['port']}"
@@ -25,8 +24,9 @@ def run_replicas(kind, replicas, script_name):
         elif kind == "it":
             peers = ["10.250.25.48:7108", "10.250.25.48:7109"]
         
-        peers += self_peers
+        peers = self_peers + "," + ",".join(peer for peer in peers)
         name = f"{kind}{i}"
+        # print(peers)
 
         os.makedirs("logs", exist_ok=True)
         logfile = open(f"logs/{name}.log", "w")
@@ -34,7 +34,7 @@ def run_replicas(kind, replicas, script_name):
             "python", script_name,
             "--host", host,
             "--port", str(port),
-            "--peers", peers,
+            "--peers", self_peers,
             "--db", db_file
         ]
         print(f"[launch] {name} on {host}:{port}")

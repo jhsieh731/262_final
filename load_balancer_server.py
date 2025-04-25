@@ -72,7 +72,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
         cur = self.db_conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS user_shard_mapping (
-                user_id INTEGER PRIMARY KEY,
+                username TEXT PRIMARY KEY,
                 shard_id INTEGER NOT NULL
             );
         """)
@@ -193,22 +193,22 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
             return next((stub for (h, p), stub in self.inventory_stubs if (h, p) == self.inventory_leader), None)
         return None
     
-    def get_user_shard(self, user_id):
+    def get_user_shard(self, username):
         """Get the shard ID for a user"""
-        if not user_id:
+        if not username:
             return None
             
         cur = self.db_conn.cursor()
-        cur.execute("SELECT shard_id FROM user_shard_mapping WHERE user_id = ?", (user_id,))
+        cur.execute("SELECT shard_id FROM user_shard_mapping WHERE username = ?", (username,))
         row = cur.fetchone()
         
         if row:
             return row["shard_id"]
         return None
     
-    def get_stub_for_user(self, user_id):
+    def get_stub_for_user(self, username):
         """Get the appropriate shard stub for a user"""
-        shard_id = self.get_user_shard(user_id)
+        shard_id = self.get_user_shard(username)
         if shard_id == 1:
             return self.get_shard1_stub()
         elif shard_id == 2:
@@ -222,16 +222,16 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
             action = cmd.get("action")
             
             if action == "map_user_to_shard":
-                user_id = cmd.get("user_id")
+                username = cmd.get("username")
                 shard_id = cmd.get("shard_id")
                 
                 cur = self.db_conn.cursor()
                 cur.execute("""
-                    INSERT OR REPLACE INTO user_shard_mapping (user_id, shard_id) 
+                    INSERT INTO user_shard_mapping (username, shard_id) 
                     VALUES (?, ?)
-                """, (user_id, shard_id))
+                """, (username, shard_id))
                 self.db_conn.commit()
-                self.logger.info(f"Applied map_user_to_shard: user {user_id} -> shard {shard_id}")
+                self.logger.info(f"Applied map_user_to_shard: user {username} -> shard {shard_id}")
             else:
                 self.logger.warning(f"Unknown command action: {action}")
                 
@@ -265,7 +265,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
             
         command = json.dumps({
             "action": "map_user_to_shard",
-            "user_id": request.user_id,
+            "username": request.username,
             "shard_id": request.shard_id
         })
         
@@ -284,7 +284,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
                 if response.success:
                     # User found on shard 1, make sure mapping is stored
                     if hasattr(self, 'raft_node') and self.raft_node.state == "Leader":
-                        self._map_user_to_shard(response.user_id, 1)
+                        self._map_user_to_shard(request.username, 1)
                     return response
             except grpc.RpcError as e:
                 self.logger.warning(f"Error contacting shard 1 for login: {e.code()}")
@@ -297,7 +297,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
                 if response.success:
                     # User found on shard 2, make sure mapping is stored
                     if hasattr(self, 'raft_node') and self.raft_node.state == "Leader":
-                        self._map_user_to_shard(response.user_id, 2)
+                        self._map_user_to_shard(request.username, 2)
                     return response
             except grpc.RpcError as e:
                 self.logger.warning(f"Error contacting shard 2 for login: {e.code()}")
@@ -305,11 +305,13 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
         # If we get here, user not found on either shard or both shards unavailable
         return user_cart_pb2.LoginResponse(success=False)
     
-    def _map_user_to_shard(self, user_id, shard_id):
+    def _map_user_to_shard(self, username, shard_id):
         """Map a user to a shard and replicate to other load balancers"""
+        print(f"mapping user {username} to shard {shard_id}")
+        self.logger.info(f"Mapping user {username} to shard {shard_id}")
         command = json.dumps({
             "action": "map_user_to_shard",
-            "user_id": user_id,
+            "username": username,
             "shard_id": shard_id
         })
         self.raft_node.submit_command(command)
@@ -317,7 +319,17 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
     def CreateAccount(self, request, context):
         """Create a new user account and assign to a shard"""
         self.logger.info(f"Create account request for user: {request.username}")
-        
+
+        # See if username is unique
+        cur = self.db_conn.cursor()
+        cur.execute("SELECT shard_id FROM user_shard_mapping WHERE username = ?", (request.username,))
+        row = cur.fetchone()
+        if row:
+            context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+            context.set_details("Username already exists")
+            return user_cart_pb2.CreateAccountResponse(success=False)
+
+        # If username is unique, proceed to create account
         # Randomly select a shard
         target_shard = random.choice([1, 2])
         
@@ -336,7 +348,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
             
             if response.success and hasattr(self, 'raft_node') and self.raft_node.state == "Leader":
                 # Map the new user to the selected shard
-                self._map_user_to_shard(response.user_id, target_shard)
+                self._map_user_to_shard(request.username, target_shard)
                 
             return response
             
@@ -381,8 +393,8 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
     
     def GetCart(self, request, context):
         """Get user's cart"""
-        user_id = request.user_id
-        stub = self.get_stub_for_user(user_id)
+        username = request.username
+        stub = self.get_stub_for_user(username)
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
@@ -398,8 +410,8 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
     
     def AddToCart(self, request, context):
         """Add item to cart"""
-        user_id = request.user_id
-        stub = self.get_stub_for_user(user_id)
+        username = request.username
+        stub = self.get_stub_for_user(username)
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
@@ -420,8 +432,8 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
     
     def RemoveFromCart(self, request, context):
         """Remove item from cart"""
-        user_id = request.user_id
-        stub = self.get_stub_for_user(user_id)
+        username = request.username
+        stub = self.get_stub_for_user(username)
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
@@ -442,8 +454,8 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
     
     def Checkout(self, request, context):
         """Process checkout"""
-        user_id = request.user_id
-        stub = self.get_stub_for_user(user_id)
+        username = request.username
+        stub = self.get_stub_for_user(username)
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)

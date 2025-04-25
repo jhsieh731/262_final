@@ -40,6 +40,7 @@ message CreateAccountResponse {
 
 message UserRequest {
   int32 user_id = 1;
+  string username = 2;
 }
 
 message UpdateCartRequest {

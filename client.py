@@ -23,7 +23,7 @@ def load_config():
 config = load_config()
 
 # Load balancer replicas from config
-LOAD_BALANCER_REPLICAS = [(r["host"], r["port"]) for r in config["loadbalancer"]]
+LOAD_BALANCER_REPLICAS = [(r["host"], r["port"]) for r in config["loadbalancer"]] + [("10.250.25.48", 8008), ("10.250.25.48", 8009)]
 
 POLL_INTERVAL = 5  # seconds
 
@@ -258,7 +258,7 @@ class ClientApp:
 
         def make_rpc():
             # Use the load balancer's UserRequest
-            user_request = user_cart_pb2.UserRequest(user_id=self.user_id)
+            user_request = user_cart_pb2.UserRequest(user_id=self.user_id, username=self.current_username)
             return stub.GetCart(user_request)
 
         self.threaded_rpc("Load Cart", make_rpc, on_success, self.load_cart)
@@ -298,7 +298,8 @@ class ClientApp:
             cart_request = load_balancer_pb2.LoadBalancerCartRequest(
                 user_id=self.user_id, 
                 inventory_id=item.id, 
-                quantity=qty
+                quantity=qty,
+                username=self.current_username
             )
             return stub.AddToCart(cart_request)
 
@@ -335,7 +336,8 @@ class ClientApp:
             cart_request = load_balancer_pb2.LoadBalancerCartRequest(
                 user_id=self.user_id, 
                 inventory_id=item.id, 
-                quantity=0
+                quantity=0,
+                username=self.current_username
             )
             return stub.RemoveFromCart(cart_request)
 
@@ -375,7 +377,7 @@ class ClientApp:
                 self.status_var.set("Processing checkout...")
                 
                 # Single call to load balancer handles the entire checkout
-                user_request = user_cart_pb2.UserRequest(user_id=self.user_id)
+                user_request = user_cart_pb2.UserRequest(user_id=self.user_id, username=self.current_username)
                 stub.Checkout(user_request)
                 
                 # Get updated inventory after checkout
@@ -472,12 +474,15 @@ class ClientApp:
                     # Reset leader and retry
                     if on_error:
                         self.root.after(500, on_error)
+                elif e.code() == grpc.StatusCode.ALREADY_EXISTS:
+                    logger.error(f"Username already exists in threaded_rpc")
+                    self.root.after(0, lambda: messagebox.showerror("Error", f"Username already exists"))
                 else:
                     logger.error(f"{operation_name} error: {e.code()} - {e.details()}")
-                    self.root.after(0, lambda: messagebox.showerror("Error", f"{operation_name} failed: {e.details()}"))
+                    # self.root.after(0, lambda: messagebox.showerror("Error", f"{operation_name} failed: {e.details()}"))
             except Exception as e2:
                 logger.error(f"{operation_name} unexpected error: {str(e2)}")
-                self.root.after(0, lambda: messagebox.showerror("Error", f"Unexpected error: {str(e2)}"))
+                # self.root.after(0, lambda: messagebox.showerror("Error", f"Unexpected error: {str(e2)}"))
             finally:
                 # Re-enable button if one was disabled
                 if disabled_button:

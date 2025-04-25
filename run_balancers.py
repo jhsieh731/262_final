@@ -14,7 +14,8 @@ def run_load_balancers(config):
     # Construct peer list for Raft
     self_peers = ",".join(f"{lb['host']}:{lb['port']}" for lb in lb_configs)
     peer_list = ["10.250.25.48:8008", "10.250.25.48:8009"]
-    peer_list += self_peers
+    peer_list = ",".join(peer for peer in peer_list)
+    peer_list = self_peers + "," + peer_list
     
     for i, lb in enumerate(lb_configs):
         host, port, db_file = lb["host"], lb["port"], lb["db"]
@@ -26,7 +27,7 @@ def run_load_balancers(config):
             "python", "load_balancer_server.py",
             "--host", host,
             "--port", str(port),
-            "--peers", peer_list,
+            "--peers", self_peers,
             "--db", db_file
         ]
         print(f"[launch] {name} on {host}:{port}")

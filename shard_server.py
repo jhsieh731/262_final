@@ -16,7 +16,7 @@ from proto import user_cart_pb2, user_cart_pb2_grpc
 from proto import raft_pb2, raft_pb2_grpc
 from raft_node import RaftNode
 
-from raft_node import set_raft_logger  # 👈 you’ll define this
+from raft_node import set_raft_logger
 
 
 

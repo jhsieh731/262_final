@@ -15,7 +15,7 @@ import user_cart_pb2 as user__cart__pb2
 import inventory_pb2 as inventory__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13load_balancer.proto\x12\x0cloadbalancer\x1a\x0fuser_cart.proto\x1a\x0finventory.proto\"R\n\x17LoadBalancerCartRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\x12\x14\n\x0cinventory_id\x18\x02 \x01(\x05\x12\x10\n\x08quantity\x18\x03 \x01(\x05\"^\n\x1cLoadBalancerInventoryRequest\x12\x14\n\x0cinventory_id\x18\x01 \x01(\x05\x12\x17\n\x0fquantity_change\x18\x02 \x01(\x05\x12\x0f\n\x07user_id\x18\x03 \x01(\x05\"8\n\x13ShardMappingRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\x12\x10\n\x08shard_id\x18\x02 \x01(\x05\".\n\x10HeartbeatRequest\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"&\n\x11HeartbeatResponse\x12\x11\n\tis_leader\x18\x01 \x01(\x08\"\x07\n\x05\x45mpty2\xec\x05\n\x13LoadBalancerService\x12\x38\n\x05Login\x12\x16.usercart.LoginRequest\x1a\x17.usercart.LoginResponse\x12P\n\rCreateAccount\x12\x1e.usercart.CreateAccountRequest\x1a\x1f.usercart.CreateAccountResponse\x12J\n\tAddToCart\x12%.loadbalancer.LoadBalancerCartRequest\x1a\x16.usercart.CartResponse\x12O\n\x0eRemoveFromCart\x12%.loadbalancer.LoadBalancerCartRequest\x1a\x16.usercart.CartResponse\x12\x38\n\x07GetCart\x12\x15.usercart.UserRequest\x1a\x16.usercart.CartResponse\x12=\n\x08\x43heckout\x12\x15.usercart.UserRequest\x1a\x1a.usercart.CheckoutResponse\x12:\n\x0cGetInventory\x12\x10.inventory.Empty\x1a\x18.inventory.InventoryList\x12X\n\x0fUpdateInventory\x12*.loadbalancer.LoadBalancerInventoryRequest\x1a\x19.inventory.UpdateResponse\x12O\n\x15ReplicateShardMapping\x12!.loadbalancer.ShardMappingRequest\x1a\x13.loadbalancer.Empty\x12L\n\tHeartbeat\x12\x1e.loadbalancer.HeartbeatRequest\x1a\x1f.loadbalancer.HeartbeatResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13load_balancer.proto\x12\x0cloadbalancer\x1a\x0fuser_cart.proto\x1a\x0finventory.proto\"d\n\x17LoadBalancerCartRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\x12\x14\n\x0cinventory_id\x18\x02 \x01(\x05\x12\x10\n\x08quantity\x18\x03 \x01(\x05\x12\x10\n\x08username\x18\x04 \x01(\t\"^\n\x1cLoadBalancerInventoryRequest\x12\x14\n\x0cinventory_id\x18\x01 \x01(\x05\x12\x17\n\x0fquantity_change\x18\x02 \x01(\x05\x12\x0f\n\x07user_id\x18\x03 \x01(\x05\"8\n\x13ShardMappingRequest\x12\x0f\n\x07user_id\x18\x01 \x01(\x05\x12\x10\n\x08shard_id\x18\x02 \x01(\x05\".\n\x10HeartbeatRequest\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"&\n\x11HeartbeatResponse\x12\x11\n\tis_leader\x18\x01 \x01(\x08\"\x07\n\x05\x45mpty2\xec\x05\n\x13LoadBalancerService\x12\x38\n\x05Login\x12\x16.usercart.LoginRequest\x1a\x17.usercart.LoginResponse\x12P\n\rCreateAccount\x12\x1e.usercart.CreateAccountRequest\x1a\x1f.usercart.CreateAccountResponse\x12J\n\tAddToCart\x12%.loadbalancer.LoadBalancerCartRequest\x1a\x16.usercart.CartResponse\x12O\n\x0eRemoveFromCart\x12%.loadbalancer.LoadBalancerCartRequest\x1a\x16.usercart.CartResponse\x12\x38\n\x07GetCart\x12\x15.usercart.UserRequest\x1a\x16.usercart.CartResponse\x12=\n\x08\x43heckout\x12\x15.usercart.UserRequest\x1a\x1a.usercart.CheckoutResponse\x12:\n\x0cGetInventory\x12\x10.inventory.Empty\x1a\x18.inventory.InventoryList\x12X\n\x0fUpdateInventory\x12*.loadbalancer.LoadBalancerInventoryRequest\x1a\x19.inventory.UpdateResponse\x12O\n\x15ReplicateShardMapping\x12!.loadbalancer.ShardMappingRequest\x1a\x13.loadbalancer.Empty\x12L\n\tHeartbeat\x12\x1e.loadbalancer.HeartbeatRequest\x1a\x1f.loadbalancer.HeartbeatResponseb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'load_balancer_pb2', globals())
@@ -23,17 +23,17 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _LOADBALANCERCARTREQUEST._serialized_start=71
-  _LOADBALANCERCARTREQUEST._serialized_end=153
-  _LOADBALANCERINVENTORYREQUEST._serialized_start=155
-  _LOADBALANCERINVENTORYREQUEST._serialized_end=249
-  _SHARDMAPPINGREQUEST._serialized_start=251
-  _SHARDMAPPINGREQUEST._serialized_end=307
-  _HEARTBEATREQUEST._serialized_start=309
-  _HEARTBEATREQUEST._serialized_end=355
-  _HEARTBEATRESPONSE._serialized_start=357
-  _HEARTBEATRESPONSE._serialized_end=395
-  _EMPTY._serialized_start=397
-  _EMPTY._serialized_end=404
-  _LOADBALANCERSERVICE._serialized_start=407
-  _LOADBALANCERSERVICE._serialized_end=1155
+  _LOADBALANCERCARTREQUEST._serialized_end=171
+  _LOADBALANCERINVENTORYREQUEST._serialized_start=173
+  _LOADBALANCERINVENTORYREQUEST._serialized_end=267
+  _SHARDMAPPINGREQUEST._serialized_start=269
+  _SHARDMAPPINGREQUEST._serialized_end=325
+  _HEARTBEATREQUEST._serialized_start=327
+  _HEARTBEATREQUEST._serialized_end=373
+  _HEARTBEATRESPONSE._serialized_start=375
+  _HEARTBEATRESPONSE._serialized_end=413
+  _EMPTY._serialized_start=415
+  _EMPTY._serialized_end=422
+  _LOADBALANCERSERVICE._serialized_start=425
+  _LOADBALANCERSERVICE._serialized_end=1173
 # @@protoc_insertion_point(module_scope)
