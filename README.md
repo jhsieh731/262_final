@@ -12,7 +12,7 @@ This project implements a distributed shopping cart system using gRPC for backen
 
 ```[markdown]
 262_final/
-├── client_gui.py               # Tkinter GUI client
+├── client.py               # Tkinter GUI client
 ├── run_all_replicas.py         # Script to launch all server replicas & kill servers at-will
 ├── config.json                 # Configuration file (servers, ports, DB locations)
 ├── shard_server.py             # Handles users and cart logic per shard
@@ -46,8 +46,18 @@ Step 2: Run GUI client
 Launch the client interface:
 
 ```[bash]
-python client_gui.py
+python client.py
 ```
+
+If running on multiple machines, each server needs to be started individually, with a full list of peers (i.e. an inventory server receives peer inventory replica host:port addresses) passed to each.
+
+Example Inventory: `python inventory_server.py --host localhost --port 7105 --peers localhost:7106,localhost:7107,localhost:7108,localhost:7109 --db db/inventory_replica0.db`
+
+Example Shard 1: `python shard_server.py --host localhost --port 5005 --shard shard1 --peers localhost:5006,localhost:5007,localhost:5008,localhost:5009 --db db/shard1_replica0.db`
+
+Example Shard 2: `python shard_server.py --host localhost --port 6005 --shard shard2 --peers localhost:6006,localhost:6007,localhost:6008,localhost:6009 --db db/shard2_replica0.db`
+
+Example Load Balancer: `python loadbalancer_server.py --host localhost --port 8005 --peers localhost:8006,localhost:8007,localhost:8008,localhost:8009 --db db/loadbalancer_replica0.db`
 
 ## Core Features
 
