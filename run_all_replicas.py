@@ -9,7 +9,7 @@ def load_config():
 
 def run_replicas(kind, replicas, script_name):
     processes = {}
-    for i, replica in enumerate(replicas):
+    for i, replica in enumerate(replicas, start = 3):
         host, port, db_file = replica["host"], replica["port"], replica["db"]
         # TODO: change peers list
 
@@ -17,15 +17,17 @@ def run_replicas(kind, replicas, script_name):
             f"{peer['host']}:{peer['port']}"
             for peer in replicas if peer != replica
         )
-
         if kind == "s1r":
-            peers = ["10.250.25.48:5008", "10.250.25.48:5009"]
+            peers = ["10.250.213.42:5000","10.250.213.42:5001","10.250.213.42:5002"]
+            peers = ",".join(peers)
         elif kind == "s2r":
-            peers = ["10.250.25.48:6008", "10.250.25.48:6009"]
+            peers = ["10.250.213.42:6000","10.250.213.42:6001","10.250.213.42:6002"]
+            peers = ",".join(peers)
         elif kind == "it":
-            peers = ["10.250.25.48:7108", "10.250.25.48:7109"]
+            peers = ["10.250.213.42:7100","10.250.213.42:7101","10.250.213.42:7102"]
+            peers = ",".join(peers)
         
-        peers += self_peers
+        peers += "," + self_peers
         name = f"{kind}{i}"
 
         os.makedirs("logs", exist_ok=True)
