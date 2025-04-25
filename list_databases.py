@@ -70,16 +70,18 @@ def list_databases(db_dir):
     print(f"Summary: {len(db_files)} database files found in {db_dir}")
 
 if __name__ == "__main__":
-    # Default to the db directory in the current project
-    project_root = Path(__file__).parent
-    db_dir = os.path.join(project_root, "db")
-    
-    # Allow specifying a different directory via command line
-    if len(sys.argv) > 1:
-        db_dir = sys.argv[1]
-    
-    if not os.path.exists(db_dir):
-        print(f"Error: Directory '{db_dir}' does not exist.")
+    import argparse, contextlib
+    # Default db dir
+    default_dir = os.path.join(Path(__file__).parent, "db")
+    parser = argparse.ArgumentParser(description="List SQLite databases and write report to text file.")
+    parser.add_argument("db_dir", nargs="?", default=default_dir, help="Directory containing .db files")
+    parser.add_argument("-o","--output", default="db_report.txt", help="Output text file for report")
+    args = parser.parse_args()
+    if not os.path.isdir(args.db_dir):
+        print(f"Error: Directory '{args.db_dir}' does not exist.")
         sys.exit(1)
-        
-    list_databases(db_dir)
+    # Write report to file
+    with open(args.output, "w") as out_f:
+        with contextlib.redirect_stdout(out_f):
+            list_databases(args.db_dir)
+    print(f"Report written to {args.output}")
