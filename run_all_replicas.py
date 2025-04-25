@@ -9,22 +9,22 @@ def load_config():
 
 def run_replicas(kind, replicas, script_name):
     processes = {}
-    for i, replica in enumerate(replicas):
+    for i, replica in enumerate(replicas, start = 3):
         host, port, db_file = replica["host"], replica["port"], replica["db"]
 
         self_peers = ",".join(
             f"{peer['host']}:{peer['port']}"
             for peer in replicas if peer != replica
         )
-
         if kind == "s1r":
-            peers = ["10.250.25.48:5008", "10.250.25.48:5009"]
+            peers = ["10.250.213.42:5000","10.250.213.42:5001","10.250.213.42:5002"]
         elif kind == "s2r":
-            peers = ["10.250.25.48:6008", "10.250.25.48:6009"]
+            peers = ["10.250.213.42:6000","10.250.213.42:6001","10.250.213.42:6002"]
         elif kind == "it":
-            peers = ["10.250.25.48:7108", "10.250.25.48:7109"]
+            peers = ["10.250.213.42:7100","10.250.213.42:7101","10.250.213.42:7102"]
         
-        peers = self_peers + "," + ",".join(peer for peer in peers)
+        peers = ",".join(peers)
+        peers += "," + self_peers
         name = f"{kind}{i}"
         # print(peers)
 
@@ -34,7 +34,7 @@ def run_replicas(kind, replicas, script_name):
             "python", script_name,
             "--host", host,
             "--port", str(port),
-            "--peers", self_peers,
+            "--peers", peers,
             "--db", db_file
         ]
         print(f"[launch] {name} on {host}:{port}")

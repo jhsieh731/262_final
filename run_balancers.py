@@ -11,13 +11,13 @@ def run_load_balancers(config):
     processes = {}
     lb_configs = config["loadbalancer"]
     
-    # Construct peer list for Raft
-    self_peers = ",".join(f"{lb['host']}:{lb['port']}" for lb in lb_configs)
-    peer_list = ["10.250.25.48:8008", "10.250.25.48:8009"]
-    peer_list = ",".join(peer for peer in peer_list)
-    peer_list = self_peers + "," + peer_list
+    # Build complete peer list for Raft: static and dynamic, then join
+    static_peers = ["10.250.213.42:8005", "10.250.213.42:8006", "10.250.213.42:8007"]
+    dynamic_peers = [f"{lb['host']}:{lb['port']}" for lb in lb_configs]
+    full_peers = static_peers + dynamic_peers
+    peer_list = ",".join(full_peers)
     
-    for i, lb in enumerate(lb_configs):
+    for i, lb in enumerate(lb_configs, start = 3):
         host, port, db_file = lb["host"], lb["port"], lb["db"]
         name = f"lb{i}"
 
@@ -27,7 +27,7 @@ def run_load_balancers(config):
             "python", "load_balancer_server.py",
             "--host", host,
             "--port", str(port),
-            "--peers", self_peers,
+            "--peers", peer_list,
             "--db", db_file
         ]
         print(f"[launch] {name} on {host}:{port}")
