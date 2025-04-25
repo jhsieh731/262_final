@@ -7,57 +7,45 @@ def load_config():
     with open("config.json") as f:
         return json.load(f)
 
-def run_replicas(kind, replicas, script_name):
+def run_load_balancers(config):
     processes = {}
-    for i, replica in enumerate(replicas):
-        host, port, db_file = replica["host"], replica["port"], replica["db"]
-        # TODO: change peers list
-
-        self_peers = ",".join(
-            f"{peer['host']}:{peer['port']}"
-            for peer in replicas if peer != replica
-        )
-
-        if kind == "s1r":
-            peers = ["10.250.25.48:5008", "10.250.25.48:5009"]
-        elif kind == "s2r":
-            peers = ["10.250.25.48:6008", "10.250.25.48:6009"]
-        elif kind == "it":
-            peers = ["10.250.25.48:7108", "10.250.25.48:7109"]
-        
-        peers += self_peers
-        name = f"{kind}{i}"
+    lb_configs = config["loadbalancer"]
+    
+    # Construct peer list for Raft
+    self_peers = ",".join(f"{lb['host']}:{lb['port']}" for lb in lb_configs)
+    peer_list = ["10.250.25.48:8008", "10.250.25.48:8009"]
+    peer_list += self_peers
+    
+    for i, lb in enumerate(lb_configs):
+        host, port, db_file = lb["host"], lb["port"], lb["db"]
+        name = f"lb{i}"
 
         os.makedirs("logs", exist_ok=True)
         logfile = open(f"logs/{name}.log", "w")
         cmd = [
-            "python", script_name,
+            "python", "load_balancer_server.py",
             "--host", host,
             "--port", str(port),
-            "--peers", peers,
+            "--peers", peer_list,
             "--db", db_file
         ]
         print(f"[launch] {name} on {host}:{port}")
         proc = subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
         processes[name] = (proc, logfile)
         time.sleep(0.3) 
+    
     return processes
 
 def main():
     config = load_config()
-    print("Spawning all replicas...\n")
+    print("Spawning load balancer replicas...\n")
     
-    shard1 = run_replicas("s1r", config["shard1"], "shard_server.py")
-    shard2 = run_replicas("s2r", config["shard2"], "shard_server.py")
-    inventory = run_replicas("it", config["inventory"], "inventory_server.py")
-
-    all_procs = {**shard1, **shard2, **inventory}
+    load_balancers = run_load_balancers(config)
 
     print("\nInteractive commands:")
-    print("- kill s1r0       (kill shard 1 replica 0)")
-    print("- kill it2        (kill inventory replica 2)")
-    print("- list            (list live replicas)")
-    print("- exit            (stop all)\n")
+    print("- kill lb0       (kill load balancer replica 0)")
+    print("- list           (list live replicas)")
+    print("- exit           (stop all)\n")
 
     def repl():
         while True:
@@ -65,16 +53,16 @@ def main():
                 cmd = input("> ").strip()
                 if cmd.startswith("kill "):
                     name = cmd.split(" ")[1]
-                    if name in all_procs:
-                        proc, log = all_procs[name]
+                    if name in load_balancers:
+                        proc, log = load_balancers[name]
                         proc.terminate()
                         print(f"[kill] {name} terminated")
-                        del all_procs[name]
+                        del load_balancers[name]
                     else:
                         print(f"[err] No such process: {name}")
                 elif cmd == "list":
-                    for name in all_procs:
-                        proc, _ = all_procs[name]
+                    for name in load_balancers:
+                        proc, _ = load_balancers[name]
                         status = "alive" if proc.poll() is None else "dead"
                         print(f"{name}: {status}")
                 elif cmd == "exit":
@@ -85,7 +73,7 @@ def main():
                 break
 
         print("[shutdown] Killing all remaining processes...")
-        for name, (proc, _) in all_procs.items():
+        for name, (proc, _) in load_balancers.items():
             proc.terminate()
         print("[done]")
 
