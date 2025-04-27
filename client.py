@@ -23,7 +23,7 @@ def load_config():
 config = load_config()
 
 # Load balancer replicas from config
-LOAD_BALANCER_REPLICAS = [(r["host"], r["port"]) for r in config["loadbalancer"]] + [("OTHERHOST", 8005), ("OTHERHOST", 8006), ("OTHERHOST", 8007)]
+LOAD_BALANCER_REPLICAS = [(r["host"], r["port"]) for r in config["loadbalancer"]] + [("10.0.0.144", 8005), ("10.0.0.144", 8006), ("10.0.0.144", 8007)]
 
 POLL_INTERVAL = 5  # seconds
 
