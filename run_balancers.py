@@ -12,7 +12,7 @@ def run_load_balancers(config):
     lb_configs = config["loadbalancer"]
     
     # Build complete peer list for Raft: static and dynamic, then join
-    static_peers = ["10.0.0.144:8005", "10.0.0.144:8006", "10.0.0.144:8007"]
+    static_peers = ["10.0.0.144:8000", "10.0.0.144:8001", "10.0.0.144:8002"]
     dynamic_peers = [f"{lb['host']}:{lb['port']}" for lb in lb_configs]
     full_peers = static_peers + dynamic_peers
     peer_list = ",".join(full_peers)
