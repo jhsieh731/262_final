@@ -17,11 +17,11 @@ def run_replicas(kind, replicas, script_name):
             for peer in replicas if peer != replica
         )
         if kind == "s1r":
-            peers = ["10.250.213.42:5000","10.250.213.42:5001","10.250.213.42:5002"]
+            peers = ["OTHERHOST:5000","OTHERHOST:5001","OTHERHOST:5002"]
         elif kind == "s2r":
-            peers = ["10.250.213.42:6000","10.250.213.42:6001","10.250.213.42:6002"]
+            peers = ["OTHERHOST:6000","OTHERHOST:6001","OTHERHOST:6002"]
         elif kind == "it":
-            peers = ["10.250.213.42:7100","10.250.213.42:7101","10.250.213.42:7102"]
+            peers = ["OTHERHOST:7100","OTHERHOST:7101","OTHERHOST:7102"]
         
         peers = ",".join(peers)
         peers += "," + self_peers
