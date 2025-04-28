@@ -567,7 +567,7 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--peers", required=True)
     parser.add_argument("--db", required=True)
-    parser.add_argument("--config", default="config.json", help="Path to config file")
+    parser.add_argument("--config", default="fullconfig.json", help="Path to config file")
 
     args = parser.parse_args()
     

@@ -19,11 +19,16 @@ from proto import load_balancer_pb2, load_balancer_pb2_grpc
 def load_config():
     with open("config.json") as f:
         return json.load(f)
+    
+def load_full_config():
+    with open("fullconfig.json") as f:
+        return json.load(f)
 
 config = load_config()
+full_config = load_full_config()
 
 # Load balancer replicas from config
-LOAD_BALANCER_REPLICAS = [(r["host"], r["port"]) for r in config["loadbalancer"]] + [("10.250.213.42", 8005), ("10.250.213.42", 8006), ("10.250.213.42", 8007)]
+LOAD_BALANCER_REPLICAS = [(r["host"], r["port"]) for r in full_config["loadbalancer"]]
 
 POLL_INTERVAL = 5  # seconds
 

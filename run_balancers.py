@@ -7,17 +7,22 @@ def load_config():
     with open("config.json") as f:
         return json.load(f)
 
-def run_load_balancers(config):
+def load_full_config():
+    with open("fullconfig.json") as f:
+        return json.load(f)
+
+def run_load_balancers(config, full_config):
     processes = {}
     lb_configs = config["loadbalancer"]
+    full_lb_configs = full_config["loadbalancer"]
     
-    # Build complete peer list for Raft: static and dynamic, then join
-    static_peers = ["10.250.213.42:8005", "10.250.213.42:8006", "10.250.213.42:8007"]
-    dynamic_peers = [f"{lb['host']}:{lb['port']}" for lb in lb_configs]
-    full_peers = static_peers + dynamic_peers
-    peer_list = ",".join(full_peers)
+    # Construct peer list for Raft
+    peers = ",".join(f"{lb['host']}:{lb['port']}" for lb in full_lb_configs)
+    # peer_list = ["10.250.25.48:8008", "10.250.25.48:8009"]
+    # peer_list = ",".join(peer for peer in peer_list)
+    # peer_list = self_peers + "," + peer_list
     
-    for i, lb in enumerate(lb_configs, start = 3):
+    for i, lb in enumerate(lb_configs):
         host, port, db_file = lb["host"], lb["port"], lb["db"]
         name = f"lb{i}"
 
@@ -27,7 +32,7 @@ def run_load_balancers(config):
             "python", "load_balancer_server.py",
             "--host", host,
             "--port", str(port),
-            "--peers", peer_list,
+            "--peers", peers,
             "--db", db_file
         ]
         print(f"[launch] {name} on {host}:{port}")
@@ -39,9 +44,10 @@ def run_load_balancers(config):
 
 def main():
     config = load_config()
+    full_config = load_full_config()
     print("Spawning load balancer replicas...\n")
     
-    load_balancers = run_load_balancers(config)
+    load_balancers = run_load_balancers(config, full_config)
 
     print("\nInteractive commands:")
     print("- kill lb0       (kill load balancer replica 0)")

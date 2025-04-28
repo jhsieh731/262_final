@@ -7,24 +7,28 @@ def load_config():
     with open("config.json") as f:
         return json.load(f)
 
-def run_replicas(kind, replicas, script_name):
+def load_full_config():
+    with open("fullconfig.json") as f:
+        return json.load(f)
+
+def run_replicas(kind, replicas, full_replicas, script_name):
     processes = {}
-    for i, replica in enumerate(replicas, start = 3):
+    for i, replica in enumerate(replicas):
         host, port, db_file = replica["host"], replica["port"], replica["db"]
 
-        self_peers = ",".join(
+        peers = ",".join(
             f"{peer['host']}:{peer['port']}"
-            for peer in replicas if peer != replica
+            for peer in full_replicas if peer != replica
         )
-        if kind == "s1r":
-            peers = ["10.250.213.42:5000","10.250.213.42:5001","10.250.213.42:5002"]
-        elif kind == "s2r":
-            peers = ["10.250.213.42:6000","10.250.213.42:6001","10.250.213.42:6002"]
-        elif kind == "it":
-            peers = ["10.250.213.42:7100","10.250.213.42:7101","10.250.213.42:7102"]
+        # if kind == "s1r":
+        #     peers = ["10.250.213.42:5000","10.250.213.42:5001","10.250.213.42:5002"]
+        # elif kind == "s2r":
+        #     peers = ["10.250.213.42:6000","10.250.213.42:6001","10.250.213.42:6002"]
+        # elif kind == "it":
+        #     peers = ["10.250.213.42:7100","10.250.213.42:7101","10.250.213.42:7102"]
         
-        peers = ",".join(peers)
-        peers += "," + self_peers
+        # peers = ",".join(peers)
+        # peers += "," + self_peers
         name = f"{kind}{i}"
         # print(peers)
 
@@ -45,11 +49,12 @@ def run_replicas(kind, replicas, script_name):
 
 def main():
     config = load_config()
+    full_config = load_full_config()
     print("Spawning all replicas...\n")
     
-    shard1 = run_replicas("s1r", config["shard1"], "shard_server.py")
-    shard2 = run_replicas("s2r", config["shard2"], "shard_server.py")
-    inventory = run_replicas("it", config["inventory"], "inventory_server.py")
+    shard1 = run_replicas("s1r", config["shard1"], full_config["shard1"], "shard_server.py")
+    shard2 = run_replicas("s2r", config["shard2"], full_config["shard2"], "shard_server.py")
+    inventory = run_replicas("it", config["inventory"], full_config["inventory"], "inventory_server.py")
 
     all_procs = {**shard1, **shard2, **inventory}
 
