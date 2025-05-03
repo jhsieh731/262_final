@@ -7,9 +7,9 @@ Found 20 database files:
    1. inventory (3 rows)
       Columns: id, name, number
       Sample data (up to 3 rows):
-        (1, 'Apple', 100)
+        (1, 'Apple', 98)
         (2, 'Banana', 100)
-        (3, 'Carrot', 100)
+        (3, 'Carrot', 98)
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
@@ -20,9 +20,9 @@ Found 20 database files:
    1. inventory (3 rows)
       Columns: id, name, number
       Sample data (up to 3 rows):
-        (1, 'Apple', 100)
+        (1, 'Apple', 98)
         (2, 'Banana', 100)
-        (3, 'Carrot', 100)
+        (3, 'Carrot', 98)
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
@@ -33,9 +33,9 @@ Found 20 database files:
    1. inventory (3 rows)
       Columns: id, name, number
       Sample data (up to 3 rows):
-        (1, 'Apple', 100)
+        (1, 'Apple', 98)
         (2, 'Banana', 100)
-        (3, 'Carrot', 100)
+        (3, 'Carrot', 98)
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
@@ -46,9 +46,9 @@ Found 20 database files:
    1. inventory (3 rows)
       Columns: id, name, number
       Sample data (up to 3 rows):
-        (1, 'Apple', 100)
+        (1, 'Apple', 98)
         (2, 'Banana', 100)
-        (3, 'Carrot', 100)
+        (3, 'Carrot', 98)
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
@@ -59,9 +59,9 @@ Found 20 database files:
    1. inventory (3 rows)
       Columns: id, name, number
       Sample data (up to 3 rows):
-        (1, 'Apple', 100)
+        (1, 'Apple', 98)
         (2, 'Banana', 100)
-        (3, 'Carrot', 100)
+        (3, 'Carrot', 98)
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
@@ -69,148 +69,228 @@ Found 20 database files:
 
 6. loadbalancer_replica0.db (12.0 KB)
    Tables (1):
-   1. user_shard_mapping (1 rows)
+   1. user_shard_mapping (5 rows)
       Columns: username, shard_id
       Sample data (up to 3 rows):
         ('joc', 2)
+        ('joc2', 1)
+        ('joc3', 1)
 
 7. loadbalancer_replica1.db (12.0 KB)
    Tables (1):
-   1. user_shard_mapping (1 rows)
+   1. user_shard_mapping (5 rows)
       Columns: username, shard_id
       Sample data (up to 3 rows):
         ('joc', 2)
+        ('joc2', 1)
+        ('joc3', 1)
 
 8. loadbalancer_replica2.db (12.0 KB)
    Tables (1):
-   1. user_shard_mapping (1 rows)
+   1. user_shard_mapping (5 rows)
       Columns: username, shard_id
       Sample data (up to 3 rows):
         ('joc', 2)
+        ('joc2', 1)
+        ('joc3', 1)
 
 9. loadbalancer_replica3.db (12.0 KB)
    Tables (1):
-   1. user_shard_mapping (1 rows)
+   1. user_shard_mapping (5 rows)
       Columns: username, shard_id
       Sample data (up to 3 rows):
         ('joc', 2)
+        ('joc2', 1)
+        ('joc3', 1)
 
 10. loadbalancer_replica4.db (12.0 KB)
    Tables (1):
-   1. user_shard_mapping (1 rows)
+   1. user_shard_mapping (5 rows)
       Columns: username, shard_id
       Sample data (up to 3 rows):
         ('joc', 2)
+        ('joc2', 1)
+        ('joc3', 1)
 
 11. shard1_replica0.db (24.0 KB)
    Tables (3):
-   1. users (0 rows)
+   1. users (3 rows)
       Columns: user_id, username, password
-   2. sqlite_sequence (0 rows)
+      Sample data (up to 3 rows):
+        (1, 'joc2', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc3', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (3, 'joc4', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+   2. sqlite_sequence (1 rows)
       Columns: name, seq
-   3. cart (0 rows)
+      Sample data (up to 3 rows):
+        ('users', 3)
+   3. cart (2 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 3, 1, 1)
+        (2, 3, 1, 0)
 
 12. shard1_replica1.db (24.0 KB)
    Tables (3):
-   1. users (0 rows)
+   1. users (3 rows)
       Columns: user_id, username, password
-   2. sqlite_sequence (0 rows)
+      Sample data (up to 3 rows):
+        (1, 'joc2', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc3', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (3, 'joc4', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+   2. sqlite_sequence (1 rows)
       Columns: name, seq
-   3. cart (0 rows)
+      Sample data (up to 3 rows):
+        ('users', 3)
+   3. cart (2 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 3, 1, 1)
+        (2, 3, 1, 0)
 
 13. shard1_replica2.db (24.0 KB)
    Tables (3):
-   1. users (0 rows)
+   1. users (3 rows)
       Columns: user_id, username, password
-   2. sqlite_sequence (0 rows)
+      Sample data (up to 3 rows):
+        (1, 'joc2', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc3', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (3, 'joc4', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+   2. sqlite_sequence (1 rows)
       Columns: name, seq
-   3. cart (0 rows)
+      Sample data (up to 3 rows):
+        ('users', 3)
+   3. cart (2 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 3, 1, 1)
+        (2, 3, 1, 0)
 
 14. shard1_replica3.db (24.0 KB)
    Tables (3):
-   1. users (0 rows)
+   1. users (3 rows)
       Columns: user_id, username, password
-   2. sqlite_sequence (0 rows)
+      Sample data (up to 3 rows):
+        (1, 'joc2', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc3', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (3, 'joc4', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+   2. sqlite_sequence (1 rows)
       Columns: name, seq
-   3. cart (0 rows)
+      Sample data (up to 3 rows):
+        ('users', 3)
+   3. cart (2 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 3, 1, 1)
+        (2, 3, 1, 0)
 
 15. shard1_replica4.db (24.0 KB)
    Tables (3):
-   1. users (0 rows)
+   1. users (3 rows)
       Columns: user_id, username, password
-   2. sqlite_sequence (0 rows)
+      Sample data (up to 3 rows):
+        (1, 'joc2', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc3', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (3, 'joc4', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+   2. sqlite_sequence (1 rows)
       Columns: name, seq
-   3. cart (0 rows)
+      Sample data (up to 3 rows):
+        ('users', 3)
+   3. cart (2 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 3, 1, 1)
+        (2, 3, 1, 0)
 
 16. shard2_replica0.db (24.0 KB)
    Tables (3):
-   1. users (1 rows)
+   1. users (2 rows)
       Columns: user_id, username, password
       Sample data (up to 3 rows):
         (1, 'joc', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc6', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
-        ('users', 1)
-   3. cart (0 rows)
+        ('users', 2)
+   3. cart (3 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 1, 1, 1)
+        (1, 3, 1, 1)
+        (2, 1, 1, 1)
 
 17. shard2_replica1.db (24.0 KB)
    Tables (3):
-   1. users (1 rows)
+   1. users (2 rows)
       Columns: user_id, username, password
       Sample data (up to 3 rows):
         (1, 'joc', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc6', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
-        ('users', 1)
-   3. cart (0 rows)
+        ('users', 2)
+   3. cart (3 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 1, 1, 1)
+        (1, 3, 1, 1)
+        (2, 1, 1, 1)
 
 18. shard2_replica2.db (24.0 KB)
    Tables (3):
-   1. users (1 rows)
+   1. users (2 rows)
       Columns: user_id, username, password
       Sample data (up to 3 rows):
         (1, 'joc', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc6', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
-        ('users', 1)
-   3. cart (0 rows)
+        ('users', 2)
+   3. cart (3 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 1, 1, 1)
+        (1, 3, 1, 1)
+        (2, 1, 1, 1)
 
 19. shard2_replica3.db (24.0 KB)
    Tables (3):
-   1. users (1 rows)
+   1. users (2 rows)
       Columns: user_id, username, password
       Sample data (up to 3 rows):
         (1, 'joc', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc6', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
-        ('users', 1)
-   3. cart (0 rows)
+        ('users', 2)
+   3. cart (3 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 1, 1, 1)
+        (1, 3, 1, 1)
+        (2, 1, 1, 1)
 
 20. shard2_replica4.db (24.0 KB)
    Tables (3):
-   1. users (1 rows)
+   1. users (2 rows)
       Columns: user_id, username, password
       Sample data (up to 3 rows):
         (1, 'joc', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
+        (2, 'joc6', 'd74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1')
    2. sqlite_sequence (1 rows)
       Columns: name, seq
       Sample data (up to 3 rows):
-        ('users', 1)
-   3. cart (0 rows)
+        ('users', 2)
+   3. cart (3 rows)
       Columns: user_id, inventory_id, quantity, is_deleted
+      Sample data (up to 3 rows):
+        (1, 1, 1, 1)
+        (1, 3, 1, 1)
+        (2, 1, 1, 1)
 
 --------------------------------------------------------------------------------
 Summary: 20 database files found in /Users/jocelyn/CS/CS262/262_final/db

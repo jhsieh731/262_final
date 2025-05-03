@@ -3,28 +3,28 @@
         {"host": "10.250.213.42", "port": 5005, "db": "db/shard1_replica0.db"},
         {"host": "10.250.213.42", "port": 5006, "db": "db/shard1_replica1.db"},
         {"host": "10.250.213.42", "port": 5007, "db": "db/shard1_replica2.db"},
-        {"host": "10.250.213.42", "port": 5008, "db": "db/shard1_replica3.db"},
-        {"host": "10.250.213.42", "port": 5009, "db": "db/shard1_replica4.db"}
+        {"host": "10.250.25.48", "port": 5008, "db": "db/shard1_replica3.db"},
+        {"host": "10.250.25.48", "port": 5009, "db": "db/shard1_replica4.db"}
     ],
     "shard2": [
         {"host": "10.250.213.42", "port": 6005, "db": "db/shard2_replica0.db"},
         {"host": "10.250.213.42", "port": 6006, "db": "db/shard2_replica1.db"},
         {"host": "10.250.213.42", "port": 6007, "db": "db/shard2_replica2.db"},
-        {"host": "10.250.213.42", "port": 6008, "db": "db/shard2_replica3.db"},
-        {"host": "10.250.213.42", "port": 6009, "db": "db/shard2_replica4.db"}
+        {"host": "10.250.25.48", "port": 6008, "db": "db/shard2_replica3.db"},
+        {"host": "10.250.25.48", "port": 6009, "db": "db/shard2_replica4.db"}
     ],
     "inventory": [
         {"host": "10.250.213.42", "port": 7105, "db": "db/inventory_replica0.db"},
         {"host": "10.250.213.42", "port": 7106, "db": "db/inventory_replica1.db"},
         {"host": "10.250.213.42", "port": 7107, "db": "db/inventory_replica2.db"},
-        {"host": "10.250.213.42", "port": 7108, "db": "db/inventory_replica3.db"},
-        {"host": "10.250.213.42", "port": 7109, "db": "db/inventory_replica4.db"}
+        {"host": "10.250.25.48", "port": 7108, "db": "db/inventory_replica3.db"},
+        {"host": "10.250.25.48", "port": 7109, "db": "db/inventory_replica4.db"}
     ],
     "loadbalancer": [
         {"host": "10.250.213.42", "port": 8005, "db": "db/loadbalancer_replica0.db"},
         {"host": "10.250.213.42", "port": 8006, "db": "db/loadbalancer_replica1.db"},
         {"host": "10.250.213.42", "port": 8007, "db": "db/loadbalancer_replica2.db"},
-        {"host": "10.250.213.42", "port": 8008, "db": "db/loadbalancer_replica3.db"},
-        {"host": "10.250.213.42", "port": 8009, "db": "db/loadbalancer_replica4.db"}
+        {"host": "10.250.25.48", "port": 8008, "db": "db/loadbalancer_replica3.db"},
+        {"host": "10.250.25.48", "port": 8009, "db": "db/loadbalancer_replica4.db"}
     ]
   }

@@ -12,17 +12,22 @@ This project implements a distributed shopping cart system using gRPC for backen
 
 ```[markdown]
 262_final/
-├── client.py               # Tkinter GUI client
-├── run_all_replicas.py         # Script to launch all server replicas & kill servers at-will
-├── config.json                 # Configuration file (servers, ports, DB locations)
+├── client.py                   # Tkinter GUI client
+├── run_all_replicas.py         # Script to launch all shard/inventory server replicas & kill servers at-will
+├── run_balancers.py            # Script to launch all load balancer server replicas & kill servers at-will
+├── config.json                 # Configuration file (personal servers, ports, DB locations)
+├── fullconfig.json             # Configuration file (all servers, ports, DB locations)
 ├── shard_server.py             # Handles users and cart logic per shard
 ├── inventory_server.py         # Global inventory logic
+├── load_balancer_server.py     # Load balancer logic
 ├── reset_inventory.py          # Helper script to reset inventory dbs to {A: 100, B: 100, C:100}
 ├── proto/                      # Protobuf definitions
 │   ├── user_cart.proto
 │   └── inventory.proto
 ├── db/                         # SQLite databases for each replica
 ├── logs/                       # Server logs
+├── list_databases.py           # print db contents in db_report.txt
+├── print_db_contents.py        # print db contents in terminal
 └── README.md                   # This file
 └── requirements.txt            # Additional libraries required for project
 ```
@@ -35,6 +40,8 @@ Step 0: Make sure you have `db` and `logs` folders, as above. Make sure you have
 pip install -r requirements.txt
 ```
 
+Also make sure the instances you want to run are correct in `config.json`, and the list of all instances are in `fullconfig.json`.
+
 Step 1: Run server replicas
 Launch all server replicas (9 total):
 
@@ -42,7 +49,13 @@ Launch all server replicas (9 total):
 python run_all_replicas.py
 ```
 
-Step 2: Run GUI client
+Step 2: Run load balancer replicas:
+
+```[bash]
+python run_balancers.py
+```
+
+Step 3: Run GUI client
 Launch the client interface:
 
 ```[bash]
@@ -63,17 +76,21 @@ Example Load Balancer: `python loadbalancer_server.py --host localhost --port 80
 
 - Sharded users/carts: Users are randomly assigned to one of two shards upon account creation. Cart data is sharded similarly.
 - Global inventory: Items available for purchase are managed globally by a separate replicated service.
-- Leader-based replication: Each shard and the inventory service maintain a single leader replica for consistency, and is monitored with heartbeats. On failure detection, the minimum lexical host:port is selected as the leader.
-- Automatic leader detection: Clients use periodic heartbeats to detect and update leader information automatically.
-- Failover: Clients reconnect if a server replica fails or if leadership changes occur. Clients have access to all server locations.
+- Leader-based replication: Each shard and the inventory service maintain a single leader replica for consistency, and is monitored with heartbeats. On failure detection, the raft protocol determines the leader.
+- Automatic leader detection: Clients use periodic heartbeats to detect and update leader information automatically on the load balancer.
+- The load balancer maps users to shards for certain table sin the database.
+- Failover: Clients reconnect if a server replica fails or if leadership changes occur. Clients have access to all server locations for the load balancer.
 - Persistent SQLite storage: All data (users, carts, inventory) persists in SQLite databases, synchronized via replication and messages to broadcast any writes from the leader.
 - Tkinter GUI: Graphical interface allowing users to log in, add/remove cart items, and checkout.
 
 ## Design Decisions
 
+For more on this, please review our write-up.
+
 - Replication strategy: we used leader-based replication, like in the past problem set. Each server type (shard/inventory) elects a leader based on heartbeat responses and takes the minimum lexical host:port that's alive. Clients are aware of the current leaders by a heartbeat polling thread.
 - Removal of stream-based updates: Initially, we implemented real-time streaming for inventory updates but later switched to periodic polling to simplify client handling during leader changes.
 - Configurable setup: All server configurations (hostnames, ports, database locations) are centralized in config.json to simplify deployment and testing.
+- Addition of load balancer: we originally had the client have access to all shard/inventory replica locations, but we changed it so that instead of the client being aware of shards & server implementation, it just connected to the load balancers. This allowed us to remove any shard/separation of data logic from the client file.
 
 ## Notable Bugs Encountered and Solutions
 
@@ -116,4 +133,3 @@ The script run_all_replicas.py provides an interactive command-line interface to
 ## Logging
 
 Logs for each server replica are stored in the logs/ directory.
-

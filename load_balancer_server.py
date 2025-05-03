@@ -398,7 +398,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("No leader available for user's shard")
+            context.set_details("Unable to find user's shard")
             return user_cart_pb2.CartResponse()
             
         try:
@@ -415,7 +415,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("No leader available for user's shard")
+            context.set_details("Unable to find user's shard")
             return user_cart_pb2.CartResponse()
             
         try:
@@ -437,7 +437,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("No leader available for user's shard")
+            context.set_details("Unable to find user's shard")
             return user_cart_pb2.CartResponse()
             
         try:
@@ -459,7 +459,7 @@ class LoadBalancerServer(load_balancer_pb2_grpc.LoadBalancerServiceServicer):
         
         if not stub:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("No leader available for user's shard")
+            context.set_details("Unable to find user's shard")
             return user_cart_pb2.CheckoutResponse(success=False)
             
         try:
